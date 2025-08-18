@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>🤝 Skills for {{ user.username }}</h2>
+<ul>
+  {% for skill in skills %}
+    <li>{{ skill.skill_offered }} ↔ {{ skill.skill_requested }} - {{ skill.description }}</li>
+  {% endfor %}
+</ul>
+
+<h3>Add Skill Swap</h3>
+<form method="post" action="{{ url_for('create_skill') }}">
+  <input type="hidden" name="user_id" value="{{ user.id }}">
+  <input type="text" name="skill_offered" placeholder="Skill Offered" required>
+  <input type="text" name="skill_requested" placeholder="Skill Requested" required>
+  <input type="text" name="description" placeholder="Description">
+  <button type="submit">Add Skill</button>
+</form>
+{% endblock %}

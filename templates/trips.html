@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>✈️ Trips for {{ user.username }}</h2>
+<ul>
+  {% for trip in trips %}
+    <li>{{ trip.destination }} ({{ trip.start_date }} → {{ trip.end_date }}) {{ trip.notes }}</li>
+  {% endfor %}
+</ul>
+
+<h3>Add Trip</h3>
+<form method="post" action="{{ url_for('create_trip') }}">
+  <input type="hidden" name="user_id" value="{{ user.id }}">
+  <input type="text" name="destination" placeholder="Destination" required>
+  <input type="date" name="start_date" required>
+  <input type="date" name="end_date" required>
+  <input type="text" name="notes" placeholder="Notes">
+  <button type="submit">Add Trip</button>
+</form>
+{% endblock %}
