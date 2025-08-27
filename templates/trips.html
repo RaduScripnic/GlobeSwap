@@ -1,19 +1,50 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>✈️ Trips for {{ user.username }}</h2>
-<ul>
-  {% for trip in trips %}
-    <li>{{ trip.destination }} ({{ trip.start_date }} → {{ trip.end_date }}) {{ trip.notes }}</li>
-  {% endfor %}
-</ul>
+<h2 class="mb-3">✈️ Trips for {{ user.username }}</h2>
+<table class="table table-hover shadow-sm">
+    <thead class="table-info">
+        <tr>
+            <th>#</th>
+            <th>Destination</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for trip in trips %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ trip.destination }}</td>
+            <td>{{ trip.start_date }}</td>
+            <td>{{ trip.end_date }}</td>
+            <td>{{ trip.notes }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
-<h3>Add Trip</h3>
-<form method="post" action="{{ url_for('create_trip') }}">
-  <input type="hidden" name="user_id" value="{{ user.id }}">
-  <input type="text" name="destination" placeholder="Destination" required>
-  <input type="date" name="start_date" required>
-  <input type="date" name="end_date" required>
-  <input type="text" name="notes" placeholder="Notes">
-  <button type="submit">Add Trip</button>
+<h3>Add New Trip</h3>
+<form method="post" action="{{ url_for('create_trip') }}" class="p-3 border rounded shadow-sm bg-white">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    <div class="row mb-3">
+        <div class="col">
+            <label class="form-label">Destination</label>
+            <input class="form-control" type="text" name="destination" required>
+        </div>
+        <div class="col">
+            <label class="form-label">Start Date</label>
+            <input class="form-control" type="date" name="start_date" required>
+        </div>
+        <div class="col">
+            <label class="form-label">End Date</label>
+            <input class="form-control" type="date" name="end_date" required>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Notes</label>
+        <input class="form-control" type="text" name="notes" placeholder="Optional">
+    </div>
+    <button class="btn btn-info w-100">Add Trip</button>
 </form>
 {% endblock %}

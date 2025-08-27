@@ -1,18 +1,44 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>🤝 Skills for {{ user.username }}</h2>
-<ul>
-  {% for skill in skills %}
-    <li>{{ skill.skill_offered }} ↔ {{ skill.skill_requested }} - {{ skill.description }}</li>
-  {% endfor %}
-</ul>
+<h2 class="mb-3">🤝 Skills for {{ user.username }}</h2>
+<table class="table table-hover shadow-sm">
+    <thead class="table-success">
+        <tr>
+            <th>#</th>
+            <th>Skill Offered</th>
+            <th>Skill Requested</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for skill in skills %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ skill.skill_offered }}</td>
+            <td>{{ skill.skill_requested }}</td>
+            <td>{{ skill.description }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 
 <h3>Add Skill Swap</h3>
-<form method="post" action="{{ url_for('create_skill') }}">
-  <input type="hidden" name="user_id" value="{{ user.id }}">
-  <input type="text" name="skill_offered" placeholder="Skill Offered" required>
-  <input type="text" name="skill_requested" placeholder="Skill Requested" required>
-  <input type="text" name="description" placeholder="Description">
-  <button type="submit">Add Skill</button>
+<form method="post" action="{{ url_for('create_skill') }}" class="p-3 border rounded shadow-sm bg-white">
+    <input type="hidden" name="user_id" value="{{ user.id }}">
+    <div class="row mb-3">
+        <div class="col">
+            <label class="form-label">Skill Offered</label>
+            <input class="form-control" type="text" name="skill_offered" required>
+        </div>
+        <div class="col">
+            <label class="form-label">Skill Requested</label>
+            <input class="form-control" type="text" name="skill_requested" required>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <input class="form-control" type="text" name="description" placeholder="Optional">
+    </div>
+    <button class="btn btn-success w-100">Add Skill</button>
 </form>
 {% endblock %}
