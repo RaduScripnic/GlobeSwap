@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}SkillSwap{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">🔄 Skill Swaps</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Add New Skill Swap Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5>Add New Skill Swap</h5>
+            <form method="POST" action="{{ url_for('skillswap') }}">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Skill Offered</label>
+                        <input type="text" name="skill_offered" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Skill Wanted</label>
+                        <input type="text" name="skill_wanted" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">User</label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Select User</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">➕ Add Skill Swap</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Skill Swaps Table -->
+    <div class="card">
+        <div class="card-body">
+            <h5>Existing Skill Swaps</h5>
+            {% if swaps %}
+                <table class="table table-bordered table-striped mt-3">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Skill Offered</th>
+                            <th>Skill Wanted</th>
+                            <th>User</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for swap in swaps %}
+                            <tr>
+                                <td>{{ swap.id }}</td>
+                                <td>{{ swap.skill_offered }}</td>
+                                <td>{{ swap.skill_wanted }}</td>
+                                <td>{{ swap.user.username }}</td>
+                                <td>{{ swap.created_at.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No skill swaps yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
