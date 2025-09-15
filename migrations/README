@@ -1,1 +1,134 @@
-Single-database configuration for Flask.
+# 🌍 GlobeSwap
+
+GlobeSwap is a Flask-based web application designed to connect travelers and locals through **trip sharing** and **skill swapping**.  
+Users can create trips, exchange skills, and build connections across the globe.  
+
+---
+
+## 🚀 Features
+- 👤 **User Management**: Add and manage users with validation.
+- ✈️ **Trips**: Create and view trips with start/end dates.
+- 🔄 **Skill Swap**: Offer and request skills for cultural exchange.
+- 🛠 **Database**: Powered by **Flask-SQLAlchemy** with migrations using **Flask-Migrate**.
+- 🎨 **Templates**: Dynamic pages using **Jinja2** and Bootstrap.
+
+---
+
+## 📂 Project Structure
+```
+GlobeSwap/
+│── app.py              # Main Flask app
+│── models.py           # Database models (User, Trip, SkillSwap)
+│── migrations/         # Database migration files
+│── templates/          # HTML templates
+│   ├── base.html       # Base template with navigation
+│   ├── index.html      # Homepage
+│   ├── users.html      # User management
+│   ├── trips.html      # Trips management
+│   └── skillswap.html  # Skill swap management
+│── static/             # CSS, JS, and images (if needed)
+│── venv/               # Virtual environment
+│── requirements.txt    # Python dependencies
+└── README.md           # Project documentation
+```
+
+---
+
+## ⚙️ Installation & Setup
+
+### 1️⃣ Clone the Repository
+```bash
+git clone https://github.com/YOUR-USERNAME/GlobeSwap.git
+cd GlobeSwap
+```
+
+### 2️⃣ Create a Virtual Environment
+```bash
+python3 -m venv venv
+source venv/bin/activate   # On Mac/Linux
+venv\Scripts\activate      # On Windows
+```
+
+### 3️⃣ Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4️⃣ Set Up the Database
+```bash
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+```
+
+### 5️⃣ Run the Application
+```bash
+python app.py
+```
+
+Visit 👉 **http://127.0.0.1:5000** in your browser.
+
+---
+
+## 📝 Daily Workflow
+Each time you want to work on GlobeSwap:
+```bash
+cd GlobeSwap
+source venv/bin/activate
+python app.py
+```
+
+---
+
+## 🔧 Development Notes
+- Run migrations only if you **change models**:
+  ```bash
+  flask db migrate -m "description of change"
+  flask db upgrade
+  ```
+- Delete `globeswap.db` **only if you want to reset the database**.
+- Use:
+  ```bash
+  pip freeze > requirements.txt
+  ```
+  when adding new packages.
+
+---
+
+## 📌 Project Management
+We use **GitHub Projects** to track tasks, bugs, and features:  
+👉 [GlobeSwap Project Board](https://github.com/users/RaduScripnic/projects/5/views/1)
+
+---
+
+## 📦 Requirements
+Here are the main dependencies (already included in `requirements.txt`):
+```txt
+Flask==3.1.1
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+SQLAlchemy==2.0.34
+Jinja2==3.1.4
+Werkzeug==3.0.3
+```
+
+Install them via:
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## 🤝 Contributing
+1. Fork the repo  
+2. Create a feature branch (`git checkout -b feature-name`)  
+3. Commit your changes (`git commit -m "Add feature"`)  
+4. Push to branch (`git push origin feature-name`)  
+5. Open a Pull Request  
+
+---
+
+## 📜 License
+This project is licensed under the **MIT License** — feel free to use and modify.  
+
+---
