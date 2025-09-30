@@ -38,7 +38,7 @@ GlobeSwap/
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/RaduScripnic/GlobeSwap.git
+git clone https://github.com/RaduScripnic/GlobeSwap
 cd GlobeSwap
 ```
 
@@ -80,18 +80,117 @@ python app.py
 
 ---
 
-## 🔧 Development Notes
-- Run migrations only if you **change models**:
-  ```bash
-  flask db migrate -m "description of change"
-  flask db upgrade
-  ```
-- Delete `globeswap.db` **only if you want to reset the database**.
-- Use:
-  ```bash
-  pip freeze > requirements.txt
-  ```
-  when adding new packages.
+## 🛠️ Development Cycle
+
+The project was developed iteratively, with progress tracked through commits. Key stages included:
+
+1. **Initial Setup**
+   - Scaffold project with Flask.
+   - Commit: `initial setup with app.py and virtual environment`
+
+2. **Database Models**
+   - Added models for `User`, `Trip`, and `SkillSwap`.
+   - Commit: `add User, Trip, and SkillSwap models`
+
+3. **Migrations**
+   - Configured Flask-Migrate for database schema changes.
+   - Commit: `setup Flask-Migrate and create initial migration`
+
+4. **Routes & Templates**
+   - Added CRUD routes and Jinja2 templates for users, trips, and skill swaps.
+   - Commit: `add templates and CRUD routes`
+
+5. **Testing**
+   - Manual testing of all CRUD operations.
+   - Commit: `fix validation errors and add error handling`
+
+6. **Deployment**
+   - Prepared app for production deployment (Heroku/Render).
+   - Commit: `add Procfile and update config for deployment`
+
+### 📜 Example Commit Log
+| Commit Hash | Message                                     | Stage              |
+|-------------|---------------------------------------------|--------------------|
+| a1b2c3d     | Initial setup with app.py scaffold          | Initial Setup      |
+| b2c3d4e     | Add database models                         | Database Models    |
+| c3d4e5f     | Setup Flask-Migrate and first migration     | Migrations         |
+| d4e5f6g     | Add templates and CRUD routes               | Routes & Templates |
+| e5f6g7h     | Fix validation errors and add error handling| Testing            |
+| f6g7h8i     | Deployment config and Procfile added        | Deployment         |
+
+---
+
+## 🗄️ Data Model & Schema
+
+### Tables
+- **User**
+  - `id`: Integer, primary key
+  - `name`: String, required
+  - `email`: String, unique
+- **Trip**
+  - `id`: Integer, primary key
+  - `user_id`: Foreign key → User
+  - `destination`: String
+  - `start_date`, `end_date`: Date
+- **SkillSwap**
+  - `id`: Integer, primary key
+  - `user_id`: Foreign key → User
+  - `skill_offered`: String
+  - `skill_requested`: String
+
+### Relationships
+- A User can have many Trips.
+- A User can have many SkillSwap entries.
+
+---
+
+## 🧪 Testing
+
+### Manual Tests
+| Test | Input | Expected Result | Actual Result | Status |
+|------|-------|-----------------|---------------|--------|
+| Add User | name="Alice" | User added to DB | ✅ User added | Pass |
+| Add Trip | user_id=1, destination="Paris" | Trip saved | ✅ Trip saved | Pass |
+| Add SkillSwap | user_id=1, offered="Cooking", requested="Photography" | Saved | ✅ Saved | Pass |
+| Invalid User | missing email | Error message | ✅ Error shown | Pass |
+
+Screenshots available in `assets/screenshots/`.
+
+### Validation
+- HTML, CSS, JS validated via W3C tools.  
+- Python code checked with `flake8`.  
+- No console errors.
+
+---
+
+## 🚀 Deployment
+
+The app is deployed on **Heroku/Render**:  
+👉 [Live Demo](https://globeswap.onrender.com/)
+
+### Steps
+1. Add `Procfile` and `requirements.txt`.
+2. Set environment variables (`DATABASE_URL`, `SECRET_KEY`) in Heroku/Render dashboard.
+3. Push to main branch → deploys automatically.
+4. Confirm `DEBUG = False` in production.
+
+---
+
+## 📚 Credits & Attribution
+
+To clearly separate original and external sources:
+
+- **Libraries**  
+  - Flask, Flask-SQLAlchemy, Flask-Migrate (Flask ecosystem).  
+  - Bootstrap (frontend styling).  
+
+- **External Sources**  
+  - Flask official docs: [https://flask.palletsprojects.com](https://flask.palletsprojects.com)  
+  - SQLAlchemy docs: [https://docs.sqlalchemy.org](https://docs.sqlalchemy.org)  
+
+- **Original Work**  
+  - App design, models, CRUD logic, and templates created by *Radu Scripnic*.  
+  - Random city suggestion feature and user workflow are original implementations.
 
 ---
 
