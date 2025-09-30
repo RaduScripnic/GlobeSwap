@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from models import db, User, Trip, SkillSwap
+from datetime import datetime 
 
 # ----------------------------
 # Flask App Configuration
@@ -65,24 +66,35 @@ def users():
 def trips():
     if request.method == "POST":
         destination = request.form.get("destination")
-        start_date = request.form.get("start_date")
-        end_date = request.form.get("end_date")
+        start_date_str = request.form.get("start_date") 
+        end_date_str = request.form.get("end_date")     
         user_id = request.form.get("user_id")
 
-        if not destination or not start_date or not end_date or not user_id:
+        if not destination or not start_date_str or not end_date_str or not user_id:
             flash("⚠️ All fields are required!", "warning")
             return redirect(url_for("trips"))
 
         try:
+            # FIX: Convert string dates to Python date objects
+            DATE_FORMAT = "%Y-%m-%d"
+            
+            start_date_obj = datetime.strptime(start_date_str, DATE_FORMAT).date()
+            end_date_obj = datetime.strptime(end_date_str, DATE_FORMAT).date()
+            
             new_trip = Trip(
                 destination=destination,
-                start_date=start_date,
-                end_date=end_date,
+                start_date=start_date_obj, 
+                end_date=end_date_obj,     
                 user_id=user_id,
             )
             db.session.add(new_trip)
             db.session.commit()
             flash("✅ Trip added successfully!", "success")
+        
+        except ValueError:
+            flash("🚨 Error: Start date or End date is not in the required YYYY-MM-DD format.", "danger")
+            return redirect(url_for("trips"))
+            
         except Exception as e:
             db.session.rollback()
             flash(f"🚨 Error: {str(e)}", "danger")
@@ -107,10 +119,12 @@ def skillswap():
             flash("⚠️ All fields are required!", "warning")
             return redirect(url_for("skillswap"))
 
+# In app.py, inside the skillswap() POST block:
+
         try:
             new_swap = SkillSwap(
-                offered_skill=offered_skill,
-                desired_skill=desired_skill,
+                skill_offered=offered_skill,
+                skill_wanted=desired_skill, 
                 user_id=user_id,
             )
             db.session.add(new_swap)

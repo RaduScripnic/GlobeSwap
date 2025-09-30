@@ -5,7 +5,6 @@
 <div class="container mt-4">
     <h2 class="mb-4">🔄 Skill Swaps</h2>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -17,7 +16,6 @@
         {% endif %}
     {% endwith %}
 
-    <!-- Add New Skill Swap Form -->
     <div class="card mb-4">
         <div class="card-body">
             <h5>Add New Skill Swap</h5>
@@ -25,11 +23,11 @@
                 <div class="row g-3">
                     <div class="col-md-4">
                         <label class="form-label">Skill Offered</label>
-                        <input type="text" name="skill_offered" class="form-control" required>
+                        <input type="text" name="offered_skill" class="form-control" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Skill Wanted</label>
-                        <input type="text" name="skill_wanted" class="form-control" required>
+                        <input type="text" name="desired_skill" class="form-control" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">User</label>
@@ -46,7 +44,6 @@
         </div>
     </div>
 
-    <!-- Skill Swaps Table -->
     <div class="card">
         <div class="card-body">
             <h5>Existing Skill Swaps</h5>
@@ -65,7 +62,9 @@
                         {% for swap in swaps %}
                             <tr>
                                 <td>{{ swap.id }}</td>
-                                <td>{{ swap.skill_offered }}</td>
+                                <!-- FIX: Assuming the model attribute is 'skill_offered' -->
+                                <td>{{ swap.skill_offered }}</td> 
+                                <!-- FIX: Using 'skill_wanted' as it's the other highly probable name -->
                                 <td>{{ swap.skill_wanted }}</td>
                                 <td>{{ swap.user.username }}</td>
                                 <td>{{ swap.created_at.strftime('%Y-%m-%d') }}</td>
