@@ -1,15 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime
+from datetime import datetime, date # ADDED date import for potential date comparison
 from sqlalchemy import exc
 
 # --- AUTHENTICATION IMPORTS ---
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
+from wtforms import StringField, PasswordField, SubmitField, DateField # ADDED DateField
+from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length
 
 # --- DATABASE SETUP ---
 app = Flask(__name__)
@@ -32,7 +32,9 @@ login_manager.login_view = 'login' # Set the view function for logging in
 @login_manager.user_loader
 def load_user(user_id):
     """Callback function used by Flask-Login to reload the user object from the session."""
-    return User.query.get(int(user_id))
+    # Use Session.get() as recommended by SQLAlchemy 2.0+
+    # return User.query.get(int(user_id)) # Legacy method
+    return db.session.get(User, int(user_id))
 
 # --- DATABASE MODELS (Moved to top for clarity and access by forms) ---
 class User(db.Model, UserMixin):
@@ -47,6 +49,9 @@ class User(db.Model, UserMixin):
     # Relationships
     trips = db.relationship("Trip", backref="user", cascade="all, delete-orphan")
     skillswaps = db.relationship("SkillSwap", backref="user", cascade="all, delete-orphan")
+    # New: Relationships for interactions sent and received
+    sent_interactions = db.relationship("Interaction", foreign_keys='Interaction.sender_id', backref="sender", lazy='dynamic', cascade="all, delete-orphan")
+    received_interactions = db.relationship("Interaction", foreign_keys='Interaction.recipient_id', backref="recipient", lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
         """Hashes the password and stores it."""
@@ -70,6 +75,9 @@ class Trip(db.Model):
     is_accommodation_offer = db.Column(db.Boolean, default=False, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
+    # New: Relationship for interactions targeting this trip
+    interactions = db.relationship("Interaction", backref="trip", lazy='dynamic', cascade="all, delete-orphan")
+
     def __repr__(self):
         return f"<Trip {self.destination}>"
 
@@ -86,12 +94,31 @@ class SkillSwap(db.Model):
         return f"<SkillSwap {self.skill_offered} for {self.skill_wanted}>"
 
 
+class Interaction(db.Model):
+    """
+    Represents a booking request or message between two users regarding a specific trip.
+    This acts as the bridge for 'booking' and communication.
+    """
+    __tablename__ = "interaction"
+    id = db.Column(db.Integer, primary_key=True)
+    trip_id = db.Column(db.Integer, db.ForeignKey("trip.id"), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), default="Pending", nullable=False) # e.g., Pending, Accepted, Rejected
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<Interaction {self.id} for Trip {self.trip_id} from {self.sender_id} to {self.recipient_id}>"
+
+
 # --- AUTHENTICATION FORMS (Using Flask-WTF) ---
 
 class RegistrationForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=25)])
     email = StringField('Email', validators=[DataRequired(), Email()])
-    password = PasswordField('Password', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     password2 = PasswordField(
         'Repeat Password', validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField('Register')
@@ -110,6 +137,23 @@ class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('Password', validators=[DataRequired()])
     submit = SubmitField('Log In')
+
+
+class ListingForm(FlaskForm):
+    """Form for creating a new Trip listing and associated SkillSwap."""
+    destination = StringField('Destination', validators=[DataRequired()])
+    # Use StringField to receive the date string from the HTML input type="date"
+    start_date = StringField('Start Date', validators=[DataRequired()]) 
+    end_date = StringField('End Date', validators=[DataRequired()])
+    offered_skill = StringField('Skill Offered', validators=[DataRequired()])
+    desired_skill = StringField('Skill Wanted', validators=[DataRequired()])
+    submit = SubmitField('Post Listing')
+
+
+class InteractionForm(FlaskForm):
+    """Simple form for a user to initiate contact about a listing."""
+    message = StringField('Your Message', validators=[DataRequired()])
+    submit = SubmitField('Send Request')
 
 
 # --- APPLICATION ROUTES ---
@@ -167,7 +211,7 @@ def login():
         
         # Redirect user to the page they tried to access before logging in
         next_page = request.args.get('next')
-        return redirect(next_page or url_for('home'))
+        return redirect(next_page or url_for('dashboard'))
     
     return render_template('login.html', form=form)
 
@@ -179,41 +223,102 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('home'))
 
-# --- USER MANAGEMENT (CRUD, mostly for testing now) ---
+# --- PERSONAL CABINET (DASHBOARD) ROUTE ---
 
-@app.route("/users", methods=["GET", "POST"])
-def users():
-    """Displays all users and allows for new user creation."""
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    """
+    Personal Cabinet: Displays the user's trips, skill swaps, 
+    and received/sent interactions.
+    """
+    user_trips = Trip.query.filter_by(user_id=current_user.id).order_by(Trip.created_at.desc()).all()
+    user_swaps = SkillSwap.query.filter_by(user_id=current_user.id).all()
     
-    # Handle user creation (using simple POST, will be replaced by registration form)
-    if request.method == "POST":
-        username = request.form.get("username")
-        email = request.form.get("email")
+    # Received Interactions (requests made on the user's listings)
+    received_interactions = Interaction.query.filter_by(recipient_id=current_user.id).order_by(Interaction.created_at.desc()).all()
+    
+    # Sent Interactions (requests the user has made on others' listings)
+    sent_interactions = Interaction.query.filter_by(sender_id=current_user.id).order_by(Interaction.created_at.desc()).all()
 
-        # In a real app, we'd hash the password here. For this demo, we'll use a placeholder.
-        if username and email:
-            try:
-                new_user = User(username=username, email=email)
-                new_user.set_password("password123") # Set a default password
-                db.session.add(new_user)
-                db.session.commit()
-                flash("User added successfully!", "success")
-            except exc.IntegrityError:
-                db.session.rollback()
-                flash("Error: Username or Email already exists.", "danger")
-            except Exception as e:
-                db.session.rollback()
-                flash(f"An unexpected error occurred: {e}", "danger")
-        else:
-            flash("All fields are required!", "danger")
-            
-        return redirect(url_for("users"))
+    return render_template(
+        "dashboard.html",
+        trips=user_trips,
+        swaps=user_swaps,
+        received_interactions=received_interactions,
+        sent_interactions=sent_interactions
+    )
 
-    all_users = User.query.order_by(User.id).all()
-    return render_template("users.html", users=all_users)
+# --- INTERACTION/BOOKING ROUTES ---
+
+@app.route("/interact/<int:trip_id>", methods=["GET", "POST"])
+@login_required
+def interact_with_listing(trip_id):
+    """Handles a user sending an interaction/booking request for a trip."""
+    trip = db.session.get(Trip, trip_id) # Using db.session.get()
+    
+    if not trip:
+        return render_template('404.html'), 404
+    
+    # Prevent users from interacting with their own listing
+    if trip.user_id == current_user.id:
+        flash("You cannot send a request for your own listing!", "warning")
+        return redirect(url_for('trips'))
+
+    form = InteractionForm()
+    if form.validate_on_submit():
+        try:
+            new_interaction = Interaction(
+                trip_id=trip.id,
+                sender_id=current_user.id,
+                recipient_id=trip.user_id,
+                message=form.message.data,
+                status="Pending"
+            )
+            db.session.add(new_interaction)
+            db.session.commit()
+            flash("Your request has been sent! Check your Dashboard for updates.", "success")
+            return redirect(url_for('trips'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error sending request: {e}", "danger")
+            return redirect(url_for('trips'))
+
+    return render_template("interact.html", trip=trip, form=form)
+
+
+@app.route("/interaction/update/<int:interaction_id>/<new_status>")
+@login_required
+def update_interaction_status(interaction_id, new_status):
+    """Allows the recipient of a request to update its status (Accept/Reject)."""
+    interaction = db.session.get(Interaction, interaction_id) # Using db.session.get()
+    
+    if not interaction:
+        return render_template('404.html'), 404
+
+    # Security check: Only the recipient can update the status
+    if interaction.recipient_id != current_user.id:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Validate status
+    if new_status in ["Accepted", "Rejected"]:
+        try:
+            interaction.status = new_status
+            db.session.commit()
+            flash(f"Request status updated to {new_status}!", "success")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating status: {e}", "danger")
+    else:
+        flash("Invalid status update.", "danger")
+
+    return redirect(url_for('dashboard'))
 
 
 # --- MARKETPLACE & LISTING ROUTES ---
+
+# Removed the /users route as it is unnecessary and a security risk.
 
 @app.route("/trips")
 def trips():
@@ -245,74 +350,85 @@ def trips():
 def create_listing():
     """Handles the creation of a new Trip listing and a corresponding SkillSwap."""
     
+    # INSTANTIATE THE FORM FOR BOTH GET AND POST
+    form = ListingForm() 
+
     if request.method == "POST":
-        # Get data from the fixed list.html form
-        destination = request.form.get("destination")
-        start_date_str = request.form.get("start_date")
-        end_date_str = request.form.get("end_date")
-        listing_type = request.form.get("listing_type") # 'seek' or 'offer'
-        offered_skill = request.form.get("offered_skill")
-        desired_skill = request.form.get("desired_skill")
-
-        # user_id is now automatically set to the logged-in user
-        user_id = current_user.id 
-
-        if not all([destination, start_date_str, end_date_str, listing_type, offered_skill, desired_skill, user_id]):
-            flash("All form fields are required!", "danger")
-            return redirect(url_for("create_listing"))
         
-        try:
-            start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
-            end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+        # 1. Validate the Flask-WTF fields first. 
+        if form.validate_on_submit():
             
-            is_offer = True if listing_type == 'offer' else False
-            
-            # 1. Create the Trip/Accommodation Listing
-            new_trip = Trip(
-                destination=destination,
-                start_date=start_date,
-                end_date=end_date,
-                is_accommodation_offer=is_offer,
-                user_id=user_id
-            )
-            db.session.add(new_trip)
-            
-            # 2. Create the corresponding SkillSwap
-            
-            if listing_type == 'seek':
-                # Traveler offers X, wants Y (accommodation)
-                skill_offer = offered_skill
-                skill_want = desired_skill
-            else: # listing_type == 'offer'
-                # Host offers X (guide/cooking), wants Y (skill)
-                # The form labels are reversed for the Host perspective, so we swap them back here.
-                # Skill offered in form (skill_input_2) is the skill_offered by the Host
-                # Skill wanted in form (skill_input_1) is the skill_wanted by the Host
-                skill_offer = desired_skill # Host's offer (e.g., guide)
-                skill_want = offered_skill  # Host's want (e.g., web design)
+            # 2. Get data from request.form.get() for custom fields (listing_type) 
+            # and for consistency with the existing manual date/skill handling.
+            destination = request.form.get("destination")
+            start_date_str = request.form.get("start_date")
+            end_date_str = request.form.get("end_date")
+            listing_type = request.form.get("listing_type") # 'seek' or 'offer'
+            offered_skill = request.form.get("offered_skill")
+            desired_skill = request.form.get("desired_skill")
 
-            new_swap = SkillSwap(
-                skill_offered=skill_offer,
-                skill_wanted=skill_want,
-                user_id=user_id
-            )
-            db.session.add(new_swap)
-            
-            db.session.commit()
-            flash("Listing posted successfully to the Marketplace!", "success")
-            return redirect(url_for("trips"))
+            user_id = current_user.id 
 
-        except ValueError:
-            flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
-        except Exception as e:
-            db.session.rollback()
-            flash(f"An unexpected error occurred: {e}", "danger")
-            
-        return redirect(url_for("create_listing"))
+            # Check for custom fields not covered by form.validate_on_submit()
+            if not listing_type:
+                flash("Please select a listing type.", "danger")
+                # Fall through to return render_template("list.html", form=form)
 
-    # GET request
-    # NOTE: Since user_id is now taken from current_user, we don't need to pass all users to the template.
-    return render_template("list.html", users=[current_user] if current_user.is_authenticated else [])
+            try:
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+                
+                # Input validation: End date must be after start date
+                if end_date <= start_date:
+                    flash("End date must be after the start date.", "danger")
+                    return render_template("list.html", form=form)
+
+                is_offer = True if listing_type == 'offer' else False
+                
+                # 3. Create the Trip/Accommodation Listing
+                new_trip = Trip(
+                    destination=destination,
+                    start_date=start_date,
+                    end_date=end_date,
+                    is_accommodation_offer=is_offer,
+                    user_id=user_id
+                )
+                db.session.add(new_trip)
+                
+                # 4. Create the corresponding SkillSwap
+                
+                if listing_type == 'seek':
+                    # Traveler offers X, wants Y (accommodation)
+                    skill_offer = offered_skill
+                    skill_want = desired_skill
+                else: # listing_type == 'offer'
+                    # Host offers X (guide/cooking), wants Y (skill)
+                    skill_offer = desired_skill # Host's offer (e.g., guide)
+                    skill_want = offered_skill  # Host's want (e.g., web design)
+
+                new_swap = SkillSwap(
+                    skill_offered=skill_offer,
+                    skill_wanted=skill_want,
+                    user_id=user_id
+                )
+                db.session.add(new_swap)
+                
+                db.session.commit()
+                flash("Listing posted successfully to the Marketplace!", "success")
+                return redirect(url_for("trips"))
+
+            except ValueError:
+                flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An unexpected error occurred: {e}", "danger")
+            
+        # If POST failed validation or hit an exception, re-render the template with the form (which contains errors)
+        return render_template("list.html", form=form)
+
+
+    # GET request: render the template with the empty form
+    return render_template("list.html", form=form)
 
 # --- RUNNING THE APP ---
 @app.cli.command('init-db')

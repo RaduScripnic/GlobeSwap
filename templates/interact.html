@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Contact Host | {{ trip.destination }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card shadow-lg border-0 rounded-3">
+            <div class="card-header bg-primary text-white text-center py-4 rounded-top-3">
+                <h1 class="h3 fw-bold mb-1">Initiate Swap Request</h1>
+                <h2 class="h5 mb-0">For Listing: <span class="fw-semibold text-warning">{{ trip.destination }}</span></h2>
+            </div>
+            
+            <div class="card-body p-4 p-md-5">
+                
+                <!-- Information Alert -->
+                <div class="alert alert-info border-start border-5 border-primary py-3" role="alert">
+                    <p class="mb-0 fw-semibold text-primary">
+                        You are contacting **{{ trip.user.username }}**. 
+                    </p>
+                    <p class="mb-0 small text-primary-emphasis">
+                        Be clear about your proposed dates and the **skill you are offering** to make the best impression.
+                    </p>
+                </div>
+                
+                <form method="POST">
+                    <!-- CSRF Token -->
+                    {{ form.hidden_tag() }}
+
+                    <!-- Message Field -->
+                    <div class="mb-4">
+                        {{ form.message.label(class="form-label fw-semibold") }}
+                        <textarea 
+                            name="{{ form.message.name }}" 
+                            id="{{ form.message.id }}" 
+                            rows="6" 
+                            placeholder="Hello! I'm interested in your accommodation offer for {{ trip.destination }}. I can offer web design for 10 hours per week during my stay. My proposed dates are {{ trip.start_date.strftime('%Y-%m-%d') }} to {{ trip.end_date.strftime('%Y-%m-%d') }}..."
+                            class="form-control form-control-lg rounded-3">
+                        </textarea>
+                        {% for error in form.message.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Submit Button -->
+                    {{ form.submit(class="btn btn-primary btn-lg w-100 fw-bold") }}
+
+                    <div class="mt-4 text-center">
+                        <a href="{{ url_for('trips') }}" class="text-muted small hover-link">Cancel and go back to Marketplace</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

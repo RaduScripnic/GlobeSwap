@@ -16,11 +16,21 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="{{ url_for('users') }}">Users</a></li>
                     
-                    <!-- NAVIGATION FIX APPLIED HERE -->
+                    <!-- Marketplace is always visible -->
                     <li class="nav-item"><a class="nav-link" href="{{ url_for('trips') }}">Marketplace</a></li>
-                    <li class="nav-item"><a class="nav-link btn btn-sm btn-outline-success ms-2" href="{{ url_for('create_listing') }}">Post Listing</a></li>
+                    
+                    <!-- Conditional Navigation based on Authentication Status -->
+                    {% if current_user.is_authenticated %}
+                        <!-- Authenticated User Links -->
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('dashboard') }}">My Cabinet</a></li>
+                        <li class="nav-item"><a class="nav-link btn btn-sm btn-success ms-2" href="{{ url_for('create_listing') }}">Post Listing</a></li>
+                        <li class="nav-item"><a class="nav-link text-white ms-2" href="{{ url_for('logout') }}">Logout</a></li>
+                    {% else %}
+                        <!-- Guest User Links -->
+                        <li class="nav-item"><a class="nav-link" href="{{ url_for('register') }}">Register</a></li>
+                        <li class="nav-item"><a class="nav-link btn btn-sm btn-success ms-2" href="{{ url_for('login') }}">Login</a></li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

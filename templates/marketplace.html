@@ -1,100 +1,150 @@
-{% extends "base.html" %}
-{% block title %}Marketplace{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GlobalSwap Marketplace</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
+        .card { 
+            transition: transform 0.3s, box-shadow 0.3s;
+            background: linear-gradient(145deg, #ffffff, #f0f0f0);
+        }
+        .card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15); 
+        }
+        .btn-interact {
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .btn-interact:hover {
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen p-4 sm:p-8">
+        <!-- Header & Navigation -->
+        <header class="mb-10 bg-white p-6 rounded-xl shadow-lg">
+            <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">🌍 GlobalSwap Marketplace</h1>
+            <p class="text-gray-600 mb-4">Find your next skill-swapped adventure or host a traveler!</p>
+            <nav class="space-x-4">
+                <a href="{{ url_for('home') }}" class="text-indigo-600 hover:text-indigo-800 font-medium">Home</a>
+                <a href="{{ url_for('create_listing') }}" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">Post a Listing</a>
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}" class="text-green-600 hover:text-green-800 font-medium">My Cabinet</a>
+                    <a href="{{ url_for('logout') }}" class="text-red-500 hover:text-red-700 font-medium">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="text-green-600 hover:text-green-800 font-medium">Login</a>
+                {% endif %}
+            </nav>
+        </header>
 
-{% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">🌍 SkillShare Accommodation Marketplace</h2>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-    {% endwith %}
-
-    <a href="{{ url_for('create_listing') }}" class="btn btn-success mb-4">➕ Create New Listing (Trip or Offer)</a>
-
-    <!-- Accommodation Offers (HOST Listings) -->
-    <div class="card mb-5 border-info">
-        <div class="card-header bg-info text-white">
-            <h5 class="mb-0">🏡 Accommodation Offers (Hosts Looking for Skills)</h5>
-        </div>
-        <div class="card-body">
-            {% if accommodation_offers %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Location</th>
-                                <th>Dates</th>
-                                <th>Host</th>
-                                <th>Host Offers (Location/Guide)</th>
-                                <th>Skill WANTED (from Traveler)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for offer in accommodation_offers %}
-                            {% set swap = all_swaps.get(offer.user_id) %}
-                            <tr>
-                                <td><span class="badge bg-secondary">{{ offer.destination }}</span></td>
-                                <td>{{ offer.start_date.strftime('%b %d') }} - {{ offer.end_date.strftime('%b %d') }}</td>
-                                <td>{{ offer.user.username }}</td>
-                                <td>{{ swap.skill_offered if swap else 'N/A' }}</td>
-                                <td><span class="badge bg-primary">{{ swap.skill_wanted if swap else 'N/A' }}</span></td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <p class="text-muted">No accommodation offers available yet. Be the first to list!</p>
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="mb-6 space-y-2">
+                {% for category, message in messages %}
+                    <li class="p-3 rounded-lg text-sm {% if category == 'success' %}bg-green-100 text-green-800{% elif category == 'danger' %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                        {{ message }}
+                    </li>
+                {% endfor %}
+                </ul>
             {% endif %}
-        </div>
-    </div>
+        {% endwith %}
 
-    <!-- Traveler Plans (SEEKER Listings) -->
-    <div class="card border-primary">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">✈️ Planned Trips (Travelers Offering Skills)</h5>
-        </div>
-        <div class="card-body">
-            <!-- CHANGED: travel_plans to requests -->
-            {% if requests %}
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Destination</th>
-                                <th>Dates</th>
-                                <th>Traveler</th>
-                                <th>Skill OFFERED (by Traveler)</th>
-                                <th>Skill WANTED (Accommodation/Guide)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- CHANGED: travel_plans to requests -->
-                            {% for trip in requests %} 
-                            {% set swap = all_swaps.get(trip.user_id) %}
-                            <tr>
-                                <td><span class="badge bg-secondary">{{ trip.destination }}</span></td>
-                                <td>{{ trip.start_date.strftime('%b %d') }} - {{ trip.end_date.strftime('%b %d') }}</td>
-                                <td>{{ trip.user.username }}</td>
-                                <td><span class="badge bg-success">{{ swap.skill_offered if swap else 'N/A' }}</span></td>
-                                <td>{{ swap.skill_wanted if swap else 'N/A' }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <!-- Accommodation Offers Section -->
+        <section class="mb-12">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 pb-2 text-indigo-600">🏡 Accommodation Offers</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {% for offer in accommodation_offers %}
+                <div class="card p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-semibold px-3 py-1 bg-green-200 text-green-800 rounded-full mb-3 inline-block">HOSTING</span>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">{{ offer.destination }}</h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Available: {{ offer.start_date.strftime('%b %d, %Y') }} to {{ offer.end_date.strftime('%b %d, %Y') }}
+                        </p>
+
+                        {% set swap = all_swaps.get(offer.user_id) %}
+                        {% if swap %}
+                            <p class="text-sm text-gray-700 mb-1"><strong class="text-indigo-500">Host Offers:</strong> {{ swap.skill_offered }} (e.g., Local Guide)</p>
+                            <p class="text-sm text-gray-700 mb-4"><strong class="text-indigo-500">Host Seeks:</strong> {{ swap.skill_wanted }}</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-400">Posted by: {{ offer.user.username }}</p>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.id == offer.user_id %}
+                                <span class="w-full bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg text-center text-sm inline-block">
+                                    Your Listing
+                                </span>
+                            {% else %}
+                                <a href="{{ url_for('interact_with_listing', trip_id=offer.id) }}" 
+                                   class="btn-interact w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-center text-sm inline-block shadow-md">
+                                    Send Swap Request
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="w-full bg-blue-100 text-blue-700 font-bold py-2 px-4 rounded-lg text-center text-sm inline-block">
+                                Login to Interact
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
-            {% else %}
-                <p class="text-muted">No planned trips posted yet. Create your first travel plan!</p>
-            {% endif %}
-        </div>
-    </div>
+                {% else %}
+                <p class="text-gray-500 col-span-full italic">No accommodation offers found. Be the first to post!</p>
+                {% endfor %}
+            </div>
+        </section>
 
-</div>
-{% endblock %}
+        <!-- Traveler Requests Section -->
+        <section>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 pb-2 text-indigo-600">✈️ Traveler Requests (Seeking Accommodation)</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {% for request in requests %}
+                <div class="card p-6 rounded-xl shadow-lg border border-gray-200 flex flex-col justify-between">
+                    <div>
+                        <span class="text-xs font-semibold px-3 py-1 bg-yellow-200 text-yellow-800 rounded-full mb-3 inline-block">SEEKING</span>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">{{ request.destination }}</h3>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Dates: {{ request.start_date.strftime('%b %d, %Y') }} to {{ request.end_date.strftime('%b %d, %Y') }}
+                        </p>
+
+                        {% set swap = all_swaps.get(request.user_id) %}
+                        {% if swap %}
+                            <p class="text-sm text-gray-700 mb-1"><strong class="text-indigo-500">Traveler Offers:</strong> {{ swap.skill_offered }}</p>
+                            <p class="text-sm text-gray-700 mb-4"><strong class="text-indigo-500">Traveler Seeks:</strong> {{ swap.skill_wanted }} (Accommodation)</p>
+                        {% endif %}
+                        <p class="text-xs text-gray-400">Posted by: {{ request.user.username }}</p>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.id == request.user_id %}
+                                <span class="w-full bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg text-center text-sm inline-block">
+                                    Your Listing
+                                </span>
+                            {% else %}
+                                <a href="{{ url_for('interact_with_listing', trip_id=request.id) }}" 
+                                   class="btn-interact w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-center text-sm inline-block shadow-md">
+                                    Send Swap Offer
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('login') }}" class="w-full bg-blue-100 text-blue-700 font-bold py-2 px-4 rounded-lg text-center text-sm inline-block">
+                                Login to Interact
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-gray-500 col-span-full italic">No traveler requests found. Post your accommodation offer!</p>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</body>
+</html>

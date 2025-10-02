@@ -3,83 +3,103 @@
 
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4">🎯 Create a Listing (Trip or Accommodation Offer)</h2>
+    <h2 class="mb-4 fw-bold text-primary">🎯 Create a GlobeSwap Listing</h2>
+    <p class="lead text-muted">Post your travel plans or your accommodation offer to find a perfect skill swap.</p>
 
-    <!-- Flash Messages -->
+    <!-- Flash Messages (Ensuring they use the base.html mechanism if available, otherwise this is a good fallback) -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
+            <div class="mb-3">
             {% for category, message in messages %}
                 <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             {% endfor %}
+            </div>
         {% endif %}
     {% endwith %}
 
-    <div class="card mb-4">
-        <div class="card-body">
+    <div class="card shadow-lg border-0 rounded-3">
+        <div class="card-body p-4 p-md-5">
             <form id="listing-form" method="POST" action="{{ url_for('create_listing') }}">
                 
+                <!-- Assuming the Flask-WTF form's hidden tag is needed -->
+                {{ form.hidden_tag() }}
+
                 <!-- STEP 1: Choose Listing Type -->
-                <div class="mb-4 p-3 bg-light rounded">
-                    <h5>1. Select Your Goal</h5>
-                    <div class="form-check form-check-inline">
-                        <!-- Corrected name to listing_type -->
-                        <input class="form-check-input" type="radio" name="listing_type" id="listTypeSeek" value="seek" required checked>
-                        <label class="form-check-label" for="listTypeSeek">
-                            Planning a Trip &amp; Seeking Accommodation
-                        </label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <!-- Corrected name to listing_type -->
-                        <input class="form-check-input" type="radio" name="listing_type" id="listTypeOffer" value="offer" required>
-                        <label class="form-check-label" for="listTypeOffer">
-                            Offering Accommodation &amp; Seeking Skill Exchange
-                        </label>
+                <div class="mb-5 p-4 bg-light rounded-3 border">
+                    <h5 class="fw-bold mb-3 text-secondary">1. Define Your Swap Goal</h5>
+                    <div class="d-flex flex-column flex-md-row gap-4">
+                        <div class="form-check form-check-lg">
+                            <input class="form-check-input" type="radio" name="listing_type" id="listTypeSeek" value="seek" required checked>
+                            <label class="form-check-label fw-semibold" for="listTypeSeek">
+                                ✈️ Planning a Trip &amp; **Seeking Accommodation**
+                            </label>
+                            <small class="d-block text-muted"> (You offer skills, you get a place to stay)</small>
+                        </div>
+                        <div class="form-check form-check-lg">
+                            <input class="form-check-input" type="radio" name="listing_type" id="listTypeOffer" value="offer" required>
+                            <label class="form-check-label fw-semibold" for="listTypeOffer">
+                                🏠 Offering Accommodation &amp; **Seeking Skill Exchange**
+                            </label>
+                            <small class="d-block text-muted"> (You offer a place, you get skills/help)</small>
+                        </div>
                     </div>
                 </div>
 
                 <!-- STEP 2: Listing Details -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <label id="destination-label" class="form-label">Destination (Where are you going?)</label>
-                        <input type="text" name="destination" class="form-control" required>
+                <h5 class="fw-bold mb-4 text-secondary">2. Trip/Location Details</h5>
+                
+                <!-- User Association (Should be handled by current_user on the backend, but kept for legacy structure) -->
+                <!-- Assuming the form object passes the user_id field for the current user -->
+                <!-- Note: The backend should ideally set the user_id automatically, not rely on a user-selected dropdown -->
+                {% if form.user_id %}
+                <div class="mb-4" style="display: none;">
+                    {{ form.user_id.label(class="form-label") }}
+                    {{ form.user_id(class="form-select") }}
+                </div>
+                {% endif %}
+
+
+                <div class="row g-4 mb-5">
+                    <div class="col-md-12">
+                        <label id="destination-label" class="form-label fw-semibold">Destination (Where are you going?)</label>
+                        {{ form.destination(class="form-control form-control-lg", placeholder="City, Country, or Region") }}
+                        {% for error in form.destination.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
+                    
                     <div class="col-md-6">
-                        <label class="form-label">Associated User</label>
-                        <select name="user_id" class="form-select" required>
-                            <option value="">Select User</option>
-                            {% for user in users %}
-                                <option value="{{ user.id }}">{{ user.username }}</option>
-                            {% endfor %}
-                        </select>
+                        <label class="form-label fw-semibold">Start Date</label>
+                        {{ form.start_date(class="form-control form-control-lg") }}
+                        {% for error in form.start_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
+                    
                     <div class="col-md-6">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" name="start_date" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">End Date</label>
-                        <input type="date" name="end_date" class="form-control" required>
+                        <label class="form-label fw-semibold">End Date</label>
+                        {{ form.end_date(class="form-control form-control-lg") }}
+                        {% for error in form.end_date.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
                 <!-- STEP 3: Skill Exchange Details (Dynamic Labels) -->
-                <div class="row g-3">
+                <h5 class="fw-bold mb-4 text-secondary">3. Skill Swap Terms</h5>
+                <div class="row g-4 mb-5">
                     <div class="col-md-6">
-                        <label id="skill-label-1" class="form-label text-primary">Skill Offered (Example: Photography, Web Design)</label>
-                        <!-- Corrected name to offered_skill -->
-                        <input type="text" name="offered_skill" class="form-control" placeholder="E.g., Web Development" required>
+                        <label id="skill-label-1" class="form-label fw-semibold text-primary">Skill Offered (Example: Photography, Web Design)</label>
+                        <!-- Assuming form.offered_skill is passed -->
+                        {{ form.offered_skill(class="form-control form-control-lg", placeholder="E.g., Web Development") }}
+                        {% for error in form.offered_skill.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                     <div class="col-md-6">
-                        <label id="skill-label-2" class="form-label text-success">Skill Wanted (E.g., Free Accommodation, Local Guide)</label>
-                        <!-- Corrected name to desired_skill -->
-                        <input type="text" name="desired_skill" class="form-control" placeholder="E.g., A Place to Stay" required>
+                        <label id="skill-label-2" class="form-label fw-semibold text-success">Skill Wanted (E.g., Free Accommodation, Local Guide)</label>
+                        <!-- Assuming form.desired_skill is passed -->
+                        {{ form.desired_skill(class="form-control form-control-lg", placeholder="E.g., A Place to Stay or Gardening Services") }}
+                        {% for error in form.desired_skill.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary mt-4 w-100">🚀 Post Listing</button>
+                <button type="submit" class="btn btn-primary btn-lg mt-4 w-100 fw-bold">🚀 Post Listing</button>
             </form>
         </div>
     </div>
@@ -87,36 +107,44 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Elements
         const listTypeSeek = document.getElementById('listTypeSeek');
         const listTypeOffer = document.getElementById('listTypeOffer');
         const skillLabel1 = document.getElementById('skill-label-1');
         const skillLabel2 = document.getElementById('skill-label-2');
         const destinationLabel = document.getElementById('destination-label');
-        // Updated to use the corrected name attribute 'desired_skill'
-        const skillInput2 = document.querySelector('input[name="desired_skill"]'); 
+        
+        // Assuming your Flask-WTF form uses these IDs/Names
+        const offeredSkillInput = document.querySelector('input[name="offered_skill"]');
+        const desiredSkillInput = document.querySelector('input[name="desired_skill"]'); 
 
         function updateLabels(isOffer) {
             if (isOffer) {
                 // HOST (Offering Accommodation)
                 destinationLabel.textContent = "Location Being Offered (City, Country)";
-                // The input fields' names are now fixed, but the labels are dynamically updated
                 skillLabel1.innerHTML = 'Skill **WANTED** from Traveler (E.g., Web Design, Gardening)';
                 skillLabel2.innerHTML = 'Skill **OFFERED** by Host (E.g., Local Guide, Cooking Lessons)';
-                skillInput2.setAttribute('placeholder', 'E.g., Basic Spanish Lessons');
+                
+                if (offeredSkillInput) offeredSkillInput.setAttribute('placeholder', 'E.g., Basic Spanish Lessons or Local Tour');
+                if (desiredSkillInput) desiredSkillInput.setAttribute('placeholder', 'E.g., 10 hours of Web Development or House Cleaning');
+
             } else {
                 // SEEKER (Planning Trip)
                 destinationLabel.textContent = "Destination (Where are you going?)";
                 skillLabel1.innerHTML = 'Skill **OFFERED** by You (E.g., Photography, Marketing)';
                 skillLabel2.innerHTML = 'Skill **WANTED** by You (E.g., Free Accommodation, Local Guide)';
-                skillInput2.setAttribute('placeholder', 'E.g., Free Accommodation');
+
+                if (offeredSkillInput) offeredSkillInput.setAttribute('placeholder', 'E.g., Web Development');
+                if (desiredSkillInput) desiredSkillInput.setAttribute('placeholder', 'E.g., Free Accommodation');
             }
         }
 
-        listTypeSeek.addEventListener('change', () => updateLabels(false));
-        listTypeOffer.addEventListener('change', () => updateLabels(true));
+        // Event Listeners
+        if (listTypeSeek) listTypeSeek.addEventListener('change', () => updateLabels(false));
+        if (listTypeOffer) listTypeOffer.addEventListener('change', () => updateLabels(true));
 
         // Initialize on load
-        updateLabels(listTypeSeek.checked ? false : true);
+        updateLabels(listTypeSeek && listTypeSeek.checked);
     });
 </script>
 {% endblock %}

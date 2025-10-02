@@ -4,37 +4,39 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h3 class="mb-0">🔑 Login to GlobeSwap</h3>
+        <div class="card shadow-lg border-0 rounded-3">
+            <div class="card-header bg-primary text-white text-center py-3 rounded-top-3">
+                <h3 class="mb-0 fw-bold">🔑 Login to GlobeSwap</h3>
+                <p class="text-white-50 mb-0">Access your Personal Cabinet</p>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4 p-md-5">
                 <form method="POST">
+                    <!-- Security Token -->
                     {{ form.hidden_tag() }}
                     
-                    <div class="mb-3">
-                        {{ form.username.label(class="form-label") }}
-                        {{ form.username(class="form-control", placeholder="Enter username") }}
+                    <div class="mb-4">
+                        {{ form.username.label(class="form-label fw-semibold") }}
+                        {{ form.username(class="form-control form-control-lg", placeholder="Enter your username or email") }}
                         {% for error in form.username.errors %}
-                            <span class="text-danger">{{ error }}</span>
+                            <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}
                     </div>
 
-                    <div class="mb-3">
-                        {{ form.password.label(class="form-label") }}
-                        {{ form.password(class="form-control", placeholder="Enter password") }}
+                    <div class="mb-4">
+                        {{ form.password.label(class="form-label fw-semibold") }}
+                        {{ form.password(class="form-control form-control-lg", placeholder="Enter your password") }}
                         {% for error in form.password.errors %}
-                            <span class="text-danger">{{ error }}</span>
+                            <div class="text-danger small mt-1">{{ error }}</div>
                         {% endfor %}
                     </div>
 
-                    <div class="d-grid gap-2">
-                        {{ form.submit(class="btn btn-primary") }}
+                    <div class="d-grid mt-4">
+                        {{ form.submit(class="btn btn-primary btn-lg fw-bold") }}
                     </div>
                 </form>
             </div>
-            <div class="card-footer text-center">
-                Don't have an account? <a href="{{ url_for('register') }}">Register here</a>.
+            <div class="card-footer text-center bg-light p-3 rounded-bottom-3">
+                Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-semibold">Register here</a>.
             </div>
         </div>
     </div>
