@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Create Listing{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">🎯 Create a Listing (Trip or Accommodation Offer)</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="listing-form" method="POST" action="{{ url_for('create_listing') }}">
+                
+                <!-- STEP 1: Choose Listing Type -->
+                <div class="mb-4 p-3 bg-light rounded">
+                    <h5>1. Select Your Goal</h5>
+                    <div class="form-check form-check-inline">
+                        <!-- Corrected name to listing_type -->
+                        <input class="form-check-input" type="radio" name="listing_type" id="listTypeSeek" value="seek" required checked>
+                        <label class="form-check-label" for="listTypeSeek">
+                            Planning a Trip &amp; Seeking Accommodation
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <!-- Corrected name to listing_type -->
+                        <input class="form-check-input" type="radio" name="listing_type" id="listTypeOffer" value="offer" required>
+                        <label class="form-check-label" for="listTypeOffer">
+                            Offering Accommodation &amp; Seeking Skill Exchange
+                        </label>
+                    </div>
+                </div>
+
+                <!-- STEP 2: Listing Details -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label id="destination-label" class="form-label">Destination (Where are you going?)</label>
+                        <input type="text" name="destination" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Associated User</label>
+                        <select name="user_id" class="form-select" required>
+                            <option value="">Select User</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" required>
+                    </div>
+                </div>
+
+                <!-- STEP 3: Skill Exchange Details (Dynamic Labels) -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label id="skill-label-1" class="form-label text-primary">Skill Offered (Example: Photography, Web Design)</label>
+                        <!-- Corrected name to offered_skill -->
+                        <input type="text" name="offered_skill" class="form-control" placeholder="E.g., Web Development" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label id="skill-label-2" class="form-label text-success">Skill Wanted (E.g., Free Accommodation, Local Guide)</label>
+                        <!-- Corrected name to desired_skill -->
+                        <input type="text" name="desired_skill" class="form-control" placeholder="E.g., A Place to Stay" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-4 w-100">🚀 Post Listing</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const listTypeSeek = document.getElementById('listTypeSeek');
+        const listTypeOffer = document.getElementById('listTypeOffer');
+        const skillLabel1 = document.getElementById('skill-label-1');
+        const skillLabel2 = document.getElementById('skill-label-2');
+        const destinationLabel = document.getElementById('destination-label');
+        // Updated to use the corrected name attribute 'desired_skill'
+        const skillInput2 = document.querySelector('input[name="desired_skill"]'); 
+
+        function updateLabels(isOffer) {
+            if (isOffer) {
+                // HOST (Offering Accommodation)
+                destinationLabel.textContent = "Location Being Offered (City, Country)";
+                // The input fields' names are now fixed, but the labels are dynamically updated
+                skillLabel1.innerHTML = 'Skill **WANTED** from Traveler (E.g., Web Design, Gardening)';
+                skillLabel2.innerHTML = 'Skill **OFFERED** by Host (E.g., Local Guide, Cooking Lessons)';
+                skillInput2.setAttribute('placeholder', 'E.g., Basic Spanish Lessons');
+            } else {
+                // SEEKER (Planning Trip)
+                destinationLabel.textContent = "Destination (Where are you going?)";
+                skillLabel1.innerHTML = 'Skill **OFFERED** by You (E.g., Photography, Marketing)';
+                skillLabel2.innerHTML = 'Skill **WANTED** by You (E.g., Free Accommodation, Local Guide)';
+                skillInput2.setAttribute('placeholder', 'E.g., Free Accommodation');
+            }
+        }
+
+        listTypeSeek.addEventListener('change', () => updateLabels(false));
+        listTypeOffer.addEventListener('change', () => updateLabels(true));
+
+        // Initialize on load
+        updateLabels(listTypeSeek.checked ? false : true);
+    });
+</script>
+{% endblock %}

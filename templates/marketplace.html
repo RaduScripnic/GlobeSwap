@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Marketplace{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">🌍 SkillShare Accommodation Marketplace</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <a href="{{ url_for('create_listing') }}" class="btn btn-success mb-4">➕ Create New Listing (Trip or Offer)</a>
+
+    <!-- Accommodation Offers (HOST Listings) -->
+    <div class="card mb-5 border-info">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">🏡 Accommodation Offers (Hosts Looking for Skills)</h5>
+        </div>
+        <div class="card-body">
+            {% if accommodation_offers %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Dates</th>
+                                <th>Host</th>
+                                <th>Host Offers (Location/Guide)</th>
+                                <th>Skill WANTED (from Traveler)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for offer in accommodation_offers %}
+                            {% set swap = all_swaps.get(offer.user_id) %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ offer.destination }}</span></td>
+                                <td>{{ offer.start_date.strftime('%b %d') }} - {{ offer.end_date.strftime('%b %d') }}</td>
+                                <td>{{ offer.user.username }}</td>
+                                <td>{{ swap.skill_offered if swap else 'N/A' }}</td>
+                                <td><span class="badge bg-primary">{{ swap.skill_wanted if swap else 'N/A' }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No accommodation offers available yet. Be the first to list!</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Traveler Plans (SEEKER Listings) -->
+    <div class="card border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">✈️ Planned Trips (Travelers Offering Skills)</h5>
+        </div>
+        <div class="card-body">
+            <!-- CHANGED: travel_plans to requests -->
+            {% if requests %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Destination</th>
+                                <th>Dates</th>
+                                <th>Traveler</th>
+                                <th>Skill OFFERED (by Traveler)</th>
+                                <th>Skill WANTED (Accommodation/Guide)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- CHANGED: travel_plans to requests -->
+                            {% for trip in requests %} 
+                            {% set swap = all_swaps.get(trip.user_id) %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ trip.destination }}</span></td>
+                                <td>{{ trip.start_date.strftime('%b %d') }} - {{ trip.end_date.strftime('%b %d') }}</td>
+                                <td>{{ trip.user.username }}</td>
+                                <td><span class="badge bg-success">{{ swap.skill_offered if swap else 'N/A' }}</span></td>
+                                <td>{{ swap.skill_wanted if swap else 'N/A' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No planned trips posted yet. Create your first travel plan!</p>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -22,7 +22,7 @@ class User(db.Model):
 
 
 # ------------------------
-# Trip Model
+# Trip Model (Now supports Accommodation Offers)
 # ------------------------
 class Trip(db.Model):
     __tablename__ = "trip"
@@ -31,6 +31,9 @@ class Trip(db.Model):
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # NEW COLUMN: True if a local is offering their home; False if a user is traveling.
+    is_accommodation_offer = db.Column(db.Boolean, default=False, nullable=False) 
 
     # Foreign key to user
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
