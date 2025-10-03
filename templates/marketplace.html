@@ -6,6 +6,7 @@
     <title>GlobalSwap Marketplace</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f7f7f7; }
         .card { 
             transition: transform 0.3s, box-shadow 0.3s;
@@ -67,9 +68,10 @@
                             Available: {{ offer.start_date.strftime('%b %d, %Y') }} to {{ offer.end_date.strftime('%b %d, %Y') }}
                         </p>
 
-                        {% set swap = all_swaps.get(offer.user_id) %}
+                        {# NEW LOGIC: Use direct relationship offer.skillswap #}
+                        {% set swap = offer.skillswap %}
                         {% if swap %}
-                            <p class="text-sm text-gray-700 mb-1"><strong class="text-indigo-500">Host Offers:</strong> {{ swap.skill_offered }} (e.g., Local Guide)</p>
+                            <p class="text-sm text-gray-700 mb-1"><strong class="text-indigo-500">Host Offers:</strong> {{ swap.skill_offered }}</p>
                             <p class="text-sm text-gray-700 mb-4"><strong class="text-indigo-500">Host Seeks:</strong> {{ swap.skill_wanted }}</p>
                         {% endif %}
                         <p class="text-xs text-gray-400">Posted by: {{ offer.user.username }}</p>
@@ -113,10 +115,11 @@
                             Dates: {{ request.start_date.strftime('%b %d, %Y') }} to {{ request.end_date.strftime('%b %d, %Y') }}
                         </p>
 
-                        {% set swap = all_swaps.get(request.user_id) %}
+                        {# NEW LOGIC: Use direct relationship request.skillswap #}
+                        {% set swap = request.skillswap %}
                         {% if swap %}
                             <p class="text-sm text-gray-700 mb-1"><strong class="text-indigo-500">Traveler Offers:</strong> {{ swap.skill_offered }}</p>
-                            <p class="text-sm text-gray-700 mb-4"><strong class="text-indigo-500">Traveler Seeks:</strong> {{ swap.skill_wanted }} (Accommodation)</p>
+                            <p class="text-sm text-gray-700 mb-4"><strong class="text-indigo-500">Traveler Seeks:</strong> {{ swap.skill_wanted }}</p>
                         {% endif %}
                         <p class="text-xs text-gray-400">Posted by: {{ request.user.username }}</p>
                     </div>

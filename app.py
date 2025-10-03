@@ -1,14 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from datetime import datetime, date # ADDED date import for potential date comparison
+from datetime import datetime, date
 from sqlalchemy import exc
 
 # --- AUTHENTICATION IMPORTS ---
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, DateField # ADDED DateField
+from wtforms import StringField, PasswordField, SubmitField, DateField 
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length
 
 # --- DATABASE SETUP ---
@@ -25,40 +25,33 @@ migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login' # Set the view function for logging in
-# REMOVED: db.init_app(app) <--- This was the duplicate that caused the error!
 
 
 # --- USER LOADER FOR FLASK-LOGIN ---
 @login_manager.user_loader
 def load_user(user_id):
     """Callback function used by Flask-Login to reload the user object from the session."""
-    # Use Session.get() as recommended by SQLAlchemy 2.0+
-    # return User.query.get(int(user_id)) # Legacy method
     return db.session.get(User, int(user_id))
 
-# --- DATABASE MODELS (Moved to top for clarity and access by forms) ---
+# --- DATABASE MODELS ---
 class User(db.Model, UserMixin):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    # New: Password hash field
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
     trips = db.relationship("Trip", backref="user", cascade="all, delete-orphan")
     skillswaps = db.relationship("SkillSwap", backref="user", cascade="all, delete-orphan")
-    # New: Relationships for interactions sent and received
     sent_interactions = db.relationship("Interaction", foreign_keys='Interaction.sender_id', backref="sender", lazy='dynamic', cascade="all, delete-orphan")
     received_interactions = db.relationship("Interaction", foreign_keys='Interaction.recipient_id', backref="recipient", lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password):
-        """Hashes the password and stores it."""
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        """Checks the stored hash against the given password."""
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
@@ -75,8 +68,9 @@ class Trip(db.Model):
     is_accommodation_offer = db.Column(db.Boolean, default=False, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
-    # New: Relationship for interactions targeting this trip
     interactions = db.relationship("Interaction", backref="trip", lazy='dynamic', cascade="all, delete-orphan")
+    # FIXED: One-to-one relationship with SkillSwap, accessible via 'trip.skillswap'.
+    skillswap = db.relationship("SkillSwap", backref="trip", uselist=False, cascade="all, delete-orphan") 
 
     def __repr__(self):
         return f"<Trip {self.destination}>"
@@ -89,16 +83,14 @@ class SkillSwap(db.Model):
     skill_wanted = db.Column(db.String(120), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-
+    # FIXED: Foreign Key to Trip, ensuring a one-to-one relationship with 'unique=True'
+    trip_id = db.Column(db.Integer, db.ForeignKey("trip.id"), unique=True, nullable=False)
+    
     def __repr__(self):
         return f"<SkillSwap {self.skill_offered} for {self.skill_wanted}>"
 
 
 class Interaction(db.Model):
-    """
-    Represents a booking request or message between two users regarding a specific trip.
-    This acts as the bridge for 'booking' and communication.
-    """
     __tablename__ = "interaction"
     id = db.Column(db.Integer, primary_key=True)
     trip_id = db.Column(db.Integer, db.ForeignKey("trip.id"), nullable=False)
@@ -113,7 +105,7 @@ class Interaction(db.Model):
         return f"<Interaction {self.id} for Trip {self.trip_id} from {self.sender_id} to {self.recipient_id}>"
 
 
-# --- AUTHENTICATION FORMS (Using Flask-WTF) ---
+# --- AUTHENTICATION FORMS ---
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=25)])
@@ -140,7 +132,7 @@ class LoginForm(FlaskForm):
 
 
 class ListingForm(FlaskForm):
-    """Form for creating a new Trip listing and associated SkillSwap."""
+    """Form for creating or editing a new Trip listing and associated SkillSwap."""
     destination = StringField('Destination', validators=[DataRequired()])
     # Use StringField to receive the date string from the HTML input type="date"
     start_date = StringField('Start Date', validators=[DataRequired()]) 
@@ -209,7 +201,6 @@ def login():
         login_user(user)
         flash('Login successful!', 'success')
         
-        # Redirect user to the page they tried to access before logging in
         next_page = request.args.get('next')
         return redirect(next_page or url_for('dashboard'))
     
@@ -231,9 +222,10 @@ def dashboard():
     """
     Personal Cabinet: Displays the user's trips, skill swaps, 
     and received/sent interactions.
+    
+    NOTE: Removed fetching user_swaps separately; they are now accessed via user_trips relationship.
     """
     user_trips = Trip.query.filter_by(user_id=current_user.id).order_by(Trip.created_at.desc()).all()
-    user_swaps = SkillSwap.query.filter_by(user_id=current_user.id).all()
     
     # Received Interactions (requests made on the user's listings)
     received_interactions = Interaction.query.filter_by(recipient_id=current_user.id).order_by(Interaction.created_at.desc()).all()
@@ -244,7 +236,6 @@ def dashboard():
     return render_template(
         "dashboard.html",
         trips=user_trips,
-        swaps=user_swaps,
         received_interactions=received_interactions,
         sent_interactions=sent_interactions
     )
@@ -255,7 +246,7 @@ def dashboard():
 @login_required
 def interact_with_listing(trip_id):
     """Handles a user sending an interaction/booking request for a trip."""
-    trip = db.session.get(Trip, trip_id) # Using db.session.get()
+    trip = db.session.get(Trip, trip_id)
     
     if not trip:
         return render_template('404.html'), 404
@@ -291,7 +282,7 @@ def interact_with_listing(trip_id):
 @login_required
 def update_interaction_status(interaction_id, new_status):
     """Allows the recipient of a request to update its status (Accept/Reject)."""
-    interaction = db.session.get(Interaction, interaction_id) # Using db.session.get()
+    interaction = db.session.get(Interaction, interaction_id)
     
     if not interaction:
         return render_template('404.html'), 404
@@ -315,16 +306,143 @@ def update_interaction_status(interaction_id, new_status):
 
     return redirect(url_for('dashboard'))
 
+# --- CRUD ROUTES: UPDATE (EDIT) ---
+
+@app.route("/listing/edit/<int:trip_id>", methods=["GET", "POST"])
+@login_required
+def edit_listing(trip_id):
+    """Handles the editing of an existing Trip listing and its associated SkillSwap."""
+    trip = db.session.get(Trip, trip_id)
+    
+    if not trip:
+        return render_template('404.html'), 404
+
+    # Security check: Only the owner can edit the listing
+    if trip.user_id != current_user.id:
+        flash("You are not authorized to edit this listing.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Access SkillSwap directly using the new one-to-one relationship
+    swap = trip.skillswap
+    
+    # Pre-populate the form fields
+    form = ListingForm(obj=trip)
+    
+    # Pre-populate skill fields manually if a swap is found for GET requests
+    if request.method == "GET" and swap:
+        # Determine how to pre-populate based on listing type 
+        if trip.is_accommodation_offer:
+            # Host (Offer): Form input 1 (offered_skill) is Host's want (swap.skill_wanted)
+            # Form input 2 (desired_skill) is Host's offer (swap.skill_offered)
+            form.offered_skill.data = swap.skill_wanted
+            form.desired_skill.data = swap.skill_offered
+        else:
+            # Traveler (Seek): Form input 1 (offered_skill) is user's offer (swap.skill_offered)
+            # Form input 2 (desired_skill) is user's want (swap.skill_wanted)
+            form.offered_skill.data = swap.skill_offered
+            form.desired_skill.data = swap.skill_wanted
+
+
+    if request.method == "POST":
+        
+        # Manually fetch data from the request object for non-WTF fields
+        start_date_str = request.form.get("start_date")
+        end_date_str = request.form.get("end_date")
+        listing_type = request.form.get("listing_type") # 'seek' or 'offer'
+
+        if form.validate_on_submit() and listing_type:
+            try:
+                # 1. Update Trip details
+                trip.destination = form.destination.data
+                
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+
+                if end_date <= start_date:
+                    flash("End date must be after the start date.", "danger")
+                    # Re-render with existing form errors
+                    return render_template("edit_listing.html", form=form, trip=trip, is_offer=trip.is_accommodation_offer)
+                
+                trip.start_date = start_date
+                trip.end_date = end_date
+                
+                is_offer = True if listing_type == 'offer' else False
+                trip.is_accommodation_offer = is_offer
+                
+                # 2. Update SkillSwap details
+                if swap: 
+                    # Apply the same logic as create_listing to determine which skill is offered/wanted
+                    if listing_type == 'seek':
+                        skill_offer = form.offered_skill.data
+                        skill_want = form.desired_skill.data
+                    else: # listing_type == 'offer'
+                        skill_offer = form.desired_skill.data # Host's offer
+                        skill_want = form.offered_skill.data  # Host's want
+
+                    swap.skill_offered = skill_offer
+                    swap.skill_wanted = skill_want
+                
+                db.session.commit()
+                flash("Listing updated successfully!", "success")
+                return redirect(url_for("dashboard"))
+
+            except ValueError:
+                flash("Invalid date format. Please use YYYY-MM-DD.", "danger")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An unexpected error occurred: {e}", "danger")
+                
+    
+    # GET request or POST failure
+    # Ensure date fields are formatted as YYYY-MM-DD string for HTML input
+    form.start_date.data = trip.start_date.isoformat()
+    form.end_date.data = trip.end_date.isoformat()
+    
+    return render_template("edit_listing.html", form=form, trip=trip, is_offer=trip.is_accommodation_offer)
+
+# --- CRUD ROUTES: DELETE ---
+
+@app.route("/listing/delete/<int:trip_id>", methods=["POST"])
+@login_required
+def delete_listing(trip_id):
+    """
+    Handles the deletion of a Trip listing. 
+    Associated SkillSwap and Interactions are automatically deleted due to cascade rules.
+    """
+    trip = db.session.get(Trip, trip_id)
+    
+    if not trip:
+        flash("Listing not found.", "danger")
+        return redirect(url_for('dashboard'))
+
+    # Security check: Only the owner can delete the listing
+    if trip.user_id != current_user.id:
+        flash("You are not authorized to delete this listing.", "danger")
+        return redirect(url_for('dashboard'))
+
+    try:
+        db.session.delete(trip)
+        db.session.commit()
+        
+        # SkillSwap and Interactions are deleted automatically via relationship cascades
+        flash("Listing and associated data successfully deleted.", "success")
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Error deleting listing: {e}", "danger")
+        return redirect(url_for('dashboard'))
+
 
 # --- MARKETPLACE & LISTING ROUTES ---
-
-# Removed the /users route as it is unnecessary and a security risk.
 
 @app.route("/trips")
 def trips():
     """
     The marketplace route. Fetches and displays both trip requests and 
     accommodation offers (SkillShares).
+    
+    NOTE: Templates must now access the SkillSwap via 'trip.skillswap'.
     """
     
     # 1. Fetch all trip requests (is_accommodation_offer = False)
@@ -333,16 +451,10 @@ def trips():
     # 2. Fetch all accommodation offers (is_accommodation_offer = True)
     accommodation_offers = Trip.query.filter_by(is_accommodation_offer=True).all()
     
-    # 3. Get all skill swaps and map them by user_id for quick lookup
-    # This is not scalable, but works for the current schema structure.
-    all_swaps_list = SkillSwap.query.all()
-    all_swaps = {swap.user_id: swap for swap in all_swaps_list}
-    
     return render_template(
         "marketplace.html", 
         requests=trip_requests,
-        accommodation_offers=accommodation_offers,
-        all_swaps=all_swaps
+        accommodation_offers=accommodation_offers
     )
 
 @app.route("/list", methods=["GET", "POST"])
@@ -359,7 +471,6 @@ def create_listing():
         if form.validate_on_submit():
             
             # 2. Get data from request.form.get() for custom fields (listing_type) 
-            # and for consistency with the existing manual date/skill handling.
             destination = request.form.get("destination")
             start_date_str = request.form.get("start_date")
             end_date_str = request.form.get("end_date")
@@ -372,7 +483,7 @@ def create_listing():
             # Check for custom fields not covered by form.validate_on_submit()
             if not listing_type:
                 flash("Please select a listing type.", "danger")
-                # Fall through to return render_template("list.html", form=form)
+                return render_template("list.html", form=form)
 
             try:
                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
@@ -395,6 +506,9 @@ def create_listing():
                 )
                 db.session.add(new_trip)
                 
+                # Commit or flush the new_trip to get its ID before creating the SkillSwap
+                db.session.flush() 
+                
                 # 4. Create the corresponding SkillSwap
                 
                 if listing_type == 'seek':
@@ -409,7 +523,8 @@ def create_listing():
                 new_swap = SkillSwap(
                     skill_offered=skill_offer,
                     skill_wanted=skill_want,
-                    user_id=user_id
+                    user_id=user_id,
+                    trip_id=new_trip.id # Link the swap to the newly created trip
                 )
                 db.session.add(new_swap)
                 
@@ -435,13 +550,8 @@ def create_listing():
 def init_db_command():
     """Initializes a new database or updates the schema."""
     with app.app_context():
-        # Ensure the new password field is created
         db.create_all() 
         print("Initialized the database with all tables.")
 
 if __name__ == "__main__":
-    with app.app_context():
-        # This will create the database file and tables (including the password_hash field)
-        # if globeswap_new.db doesn't exist.
-        db.create_all() 
     app.run(debug=True)

@@ -38,6 +38,10 @@ class Trip(db.Model):
     # Foreign key to user
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
+    # FIX APPLIED: Defines the one-to-one relationship from Trip to SkillSwap.
+    # uselist=False is essential for telling SQLAlchemy this is a one-to-one link.
+    skillswap = db.relationship("SkillSwap", backref="trip", uselist=False, cascade="all, delete-orphan") 
+
     def __repr__(self):
         return f"<Trip {self.destination}>"
 
@@ -54,6 +58,10 @@ class SkillSwap(db.Model):
 
     # Foreign key to user
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    
+    # FIX APPLIED: This is the missing column! It links SkillSwap back to the Trip.
+    # unique=True enforces the one-to-one relationship.
+    trip_id = db.Column(db.Integer, db.ForeignKey("trip.id"), unique=True, nullable=False)
 
     def __repr__(self):
         return f"<SkillSwap {self.skill_offered} for {self.skill_wanted}>"
