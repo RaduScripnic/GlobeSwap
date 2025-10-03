@@ -7,8 +7,9 @@ from sqlalchemy import exc
 # --- AUTHENTICATION IMPORTS ---
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+# ADDED BooleanField and TextAreaField (for completeness)
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField, DateField 
+from wtforms import StringField, PasswordField, SubmitField, DateField, TextAreaField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Length
 
 # --- DATABASE SETUP ---
@@ -64,12 +65,13 @@ class Trip(db.Model):
     destination = db.Column(db.String(120), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
+    # NEW: Added description field
+    description = db.Column(db.Text, nullable=True) 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_accommodation_offer = db.Column(db.Boolean, default=False, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
 
     interactions = db.relationship("Interaction", backref="trip", lazy='dynamic', cascade="all, delete-orphan")
-    # FIXED: One-to-one relationship with SkillSwap, accessible via 'trip.skillswap'.
     skillswap = db.relationship("SkillSwap", backref="trip", uselist=False, cascade="all, delete-orphan") 
 
     def __repr__(self):
@@ -83,7 +85,6 @@ class SkillSwap(db.Model):
     skill_wanted = db.Column(db.String(120), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    # FIXED: Foreign Key to Trip, ensuring a one-to-one relationship with 'unique=True'
     trip_id = db.Column(db.Integer, db.ForeignKey("trip.id"), unique=True, nullable=False)
     
     def __repr__(self):
@@ -134,12 +135,15 @@ class LoginForm(FlaskForm):
 class ListingForm(FlaskForm):
     """Form for creating or editing a new Trip listing and associated SkillSwap."""
     destination = StringField('Destination', validators=[DataRequired()])
-    # Use StringField to receive the date string from the HTML input type="date"
     start_date = StringField('Start Date', validators=[DataRequired()]) 
     end_date = StringField('End Date', validators=[DataRequired()])
+    # NEW: Added description field
+    description = TextAreaField('Description', validators=[Length(max=500)], render_kw={"rows": 4})
+    is_accommodation_offer = BooleanField('I am offering accommodation/hosting')
+    
     offered_skill = StringField('Skill Offered', validators=[DataRequired()])
     desired_skill = StringField('Skill Wanted', validators=[DataRequired()])
-    submit = SubmitField('Post Listing')
+    submit = SubmitField('Update Listing')
 
 
 class InteractionForm(FlaskForm):
@@ -222,8 +226,6 @@ def dashboard():
     """
     Personal Cabinet: Displays the user's trips, skill swaps, 
     and received/sent interactions.
-    
-    NOTE: Removed fetching user_swaps separately; they are now accessed via user_trips relationship.
     """
     user_trips = Trip.query.filter_by(user_id=current_user.id).order_by(Trip.created_at.desc()).all()
     
@@ -322,65 +324,68 @@ def edit_listing(trip_id):
         flash("You are not authorized to edit this listing.", "danger")
         return redirect(url_for('dashboard'))
 
-    # Access SkillSwap directly using the new one-to-one relationship
+    # Access SkillSwap directly using the one-to-one relationship
     swap = trip.skillswap
     
     # Pre-populate the form fields
+    # We pass the 'trip' object to populate the Trip-related fields
     form = ListingForm(obj=trip)
     
-    # Pre-populate skill fields manually if a swap is found for GET requests
+    # Handle GET request: Pre-populate skill fields manually
     if request.method == "GET" and swap:
-        # Determine how to pre-populate based on listing type 
+        # Pre-populate skills based on the stored SkillSwap record.
         if trip.is_accommodation_offer:
-            # Host (Offer): Form input 1 (offered_skill) is Host's want (swap.skill_wanted)
-            # Form input 2 (desired_skill) is Host's offer (swap.skill_offered)
-            form.offered_skill.data = swap.skill_wanted
-            form.desired_skill.data = swap.skill_offered
-        else:
-            # Traveler (Seek): Form input 1 (offered_skill) is user's offer (swap.skill_offered)
-            # Form input 2 (desired_skill) is user's want (swap.skill_wanted)
-            form.offered_skill.data = swap.skill_offered
+            # Host Offer: Host's WANT (skill_wanted) -> Form Input 1 ('offered_skill')
+            # Host's OFFER (skill_offered) -> Form Input 2 ('desired_skill')
+            form.offered_skill.data = swap.skill_wanted 
+            form.desired_skill.data = swap.skill_offered 
+        else: 
+            # Traveler Seek: Traveler's OFFER (skill_offered) -> Form Input 1 ('offered_skill')
+            # Traveler's WANT (skill_wanted) -> Form Input 2 ('desired_skill')
+            form.offered_skill.data = swap.skill_offered 
             form.desired_skill.data = swap.skill_wanted
 
 
     if request.method == "POST":
         
-        # Manually fetch data from the request object for non-WTF fields
-        start_date_str = request.form.get("start_date")
-        end_date_str = request.form.get("end_date")
-        listing_type = request.form.get("listing_type") # 'seek' or 'offer'
-
-        if form.validate_on_submit() and listing_type:
+        if form.validate_on_submit():
             try:
                 # 1. Update Trip details
                 trip.destination = form.destination.data
                 
+                # NEW: Update description
+                trip.description = form.description.data or None 
+
+                # Date fields still rely on manual parsing from string field data
+                start_date_str = form.start_date.data
+                end_date_str = form.end_date.data
+
                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
                 end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
 
                 if end_date <= start_date:
                     flash("End date must be after the start date.", "danger")
-                    # Re-render with existing form errors
-                    return render_template("edit_listing.html", form=form, trip=trip, is_offer=trip.is_accommodation_offer)
+                    return render_template("edit_listing.html", form=form, trip=trip)
                 
                 trip.start_date = start_date
                 trip.end_date = end_date
                 
-                is_offer = True if listing_type == 'offer' else False
+                is_offer = form.is_accommodation_offer.data
                 trip.is_accommodation_offer = is_offer
                 
                 # 2. Update SkillSwap details
                 if swap: 
-                    # Apply the same logic as create_listing to determine which skill is offered/wanted
-                    if listing_type == 'seek':
-                        skill_offer = form.offered_skill.data
-                        skill_want = form.desired_skill.data
-                    else: # listing_type == 'offer'
-                        skill_offer = form.desired_skill.data # Host's offer
-                        skill_want = form.offered_skill.data  # Host's want
+                    if is_offer: # Host is OFFERING accommodation
+                        # Input 1 (form.offered_skill) holds Host's WANT
+                        # Input 2 (form.desired_skill) holds Host's OFFER
+                        swap.skill_offered = form.desired_skill.data 
+                        swap.skill_wanted = form.offered_skill.data  
+                    else: # Traveler is SEEKING accommodation
+                        # Input 1 (form.offered_skill) holds Traveler's OFFER
+                        # Input 2 (form.desired_skill) holds Traveler's WANT
+                        swap.skill_offered = form.offered_skill.data
+                        swap.skill_wanted = form.desired_skill.data 
 
-                    swap.skill_offered = skill_offer
-                    swap.skill_wanted = skill_want
                 
                 db.session.commit()
                 flash("Listing updated successfully!", "success")
@@ -394,11 +399,12 @@ def edit_listing(trip_id):
                 
     
     # GET request or POST failure
-    # Ensure date fields are formatted as YYYY-MM-DD string for HTML input
-    form.start_date.data = trip.start_date.isoformat()
-    form.end_date.data = trip.end_date.isoformat()
+    if isinstance(trip.start_date, date): 
+        form.start_date.data = trip.start_date.isoformat()
+    if isinstance(trip.end_date, date):
+        form.end_date.data = trip.end_date.isoformat()
     
-    return render_template("edit_listing.html", form=form, trip=trip, is_offer=trip.is_accommodation_offer)
+    return render_template("edit_listing.html", form=form, trip=trip)
 
 # --- CRUD ROUTES: DELETE ---
 
@@ -424,7 +430,6 @@ def delete_listing(trip_id):
         db.session.delete(trip)
         db.session.commit()
         
-        # SkillSwap and Interactions are deleted automatically via relationship cascades
         flash("Listing and associated data successfully deleted.", "success")
         return redirect(url_for('dashboard'))
         
@@ -441,8 +446,6 @@ def trips():
     """
     The marketplace route. Fetches and displays both trip requests and 
     accommodation offers (SkillShares).
-    
-    NOTE: Templates must now access the SkillSwap via 'trip.skillswap'.
     """
     
     # 1. Fetch all trip requests (is_accommodation_offer = False)
@@ -462,28 +465,22 @@ def trips():
 def create_listing():
     """Handles the creation of a new Trip listing and a corresponding SkillSwap."""
     
-    # INSTANTIATE THE FORM FOR BOTH GET AND POST
     form = ListingForm() 
 
     if request.method == "POST":
         
-        # 1. Validate the Flask-WTF fields first. 
         if form.validate_on_submit():
             
-            # 2. Get data from request.form.get() for custom fields (listing_type) 
-            destination = request.form.get("destination")
-            start_date_str = request.form.get("start_date")
-            end_date_str = request.form.get("end_date")
-            listing_type = request.form.get("listing_type") # 'seek' or 'offer'
-            offered_skill = request.form.get("offered_skill")
-            desired_skill = request.form.get("desired_skill")
+            # 2. Get data from form.data (validated fields)
+            destination = form.destination.data
+            start_date_str = form.start_date.data
+            end_date_str = form.end_date.data
+            description = form.description.data # NEW: Get description
+            is_offer = form.is_accommodation_offer.data
+            offered_skill = form.offered_skill.data
+            desired_skill = form.desired_skill.data
 
             user_id = current_user.id 
-
-            # Check for custom fields not covered by form.validate_on_submit()
-            if not listing_type:
-                flash("Please select a listing type.", "danger")
-                return render_template("list.html", form=form)
 
             try:
                 start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
@@ -493,32 +490,30 @@ def create_listing():
                 if end_date <= start_date:
                     flash("End date must be after the start date.", "danger")
                     return render_template("list.html", form=form)
-
-                is_offer = True if listing_type == 'offer' else False
                 
                 # 3. Create the Trip/Accommodation Listing
                 new_trip = Trip(
                     destination=destination,
                     start_date=start_date,
                     end_date=end_date,
+                    description=description or None, # NEW: Save description
                     is_accommodation_offer=is_offer,
                     user_id=user_id
                 )
                 db.session.add(new_trip)
                 
-                # Commit or flush the new_trip to get its ID before creating the SkillSwap
                 db.session.flush() 
                 
                 # 4. Create the corresponding SkillSwap
                 
-                if listing_type == 'seek':
-                    # Traveler offers X, wants Y (accommodation)
+                if not is_offer: # Traveler is SEEKING accommodation
                     skill_offer = offered_skill
                     skill_want = desired_skill
-                else: # listing_type == 'offer'
-                    # Host offers X (guide/cooking), wants Y (skill)
-                    skill_offer = desired_skill # Host's offer (e.g., guide)
-                    skill_want = offered_skill  # Host's want (e.g., web design)
+                else: # Host is OFFERING accommodation
+                    # Input 1 (offered_skill) holds Host's WANT
+                    # Input 2 (desired_skill) holds Host's OFFER
+                    skill_offer = desired_skill 
+                    skill_want = offered_skill  
 
                 new_swap = SkillSwap(
                     skill_offered=skill_offer,
