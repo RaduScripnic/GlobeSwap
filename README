@@ -1,61 +1,82 @@
 # 🌍 GlobeSwap
 
-GlobeSwap is a Flask-based web application designed to connect travelers and locals through trip sharing and skill swapping. Users can create trip listings, offer or request specific skills (like language lessons for accommodation), and initiate connections via an internal interaction request system.
+**Author:** Radu Scripnic  
+**Live URL:** [https://globeswap.onrender.com](https://globeswap.onrender.com)  
+**Repository:** [https://github.com/RaduScripnic/GlobeSwap](https://github.com/RaduScripnic/GlobeSwap)  
+**Project Plan:** [GlobeSwap Project Board](https://github.com/users/RaduScripnic/projects/5/views/1)
+
+---
+
+## 🧭 Overview
+
+**GlobeSwap** is a Flask-based web application that connects travelers and locals through trip sharing and skill swapping.  
+Users can create trip listings, offer or request specific skills, and interact with others for cultural exchange opportunities.  
+The project demonstrates **CRUD functionality**, **database design**, and **deployment to the cloud**.
+
+---
 
 ## 🚀 Features
 
-* 👤 **User Management:** Secure registration, login, and profile management.
-* ✈️ **Trips:** Full CRUD functionality (Create, Read, Update, Delete) for trip listings with start/end dates.
-* 🔄 **Skill Swap:** Detailed one-to-one exchange mechanism for specific skills.
-* 🤝 **Interactions:** Users can send and receive requests regarding a trip listing (Accept/Reject functionality).
-* 🛠 **Database:** Powered by Flask-SQLAlchemy with migrations using Flask-Migrate.
-* 🎨 **Templates:** Dynamic, responsive pages using Jinja2 and Bootstrap.
+- 👤 **User Management** — registration, login, and profile management.
+- ✈️ **Trips CRUD** — create, read, update, and delete trip listings.
+- 🔄 **Skill Swap** — offer or request skills linked to trips.
+- 💬 **Interactions** — send and receive trip-related requests.
+- 🗄️ **Database:** Flask-SQLAlchemy with Flask-Migrate for schema management.
+- 🎨 **Templates:** Jinja2 and Bootstrap for a responsive UI.
 
-## 📂 Project Structure
+---
 
-```
-GlobeSwap/
-│── app.py              # Main Flask application and routes
-│── models.py           # Database models (User, Trip, SkillSwap, Interaction)
-│── migrations/         # Database migration files
-│── templates/          # HTML templates (including CRUD forms)
-│   ├── base.html       # Base template with navigation
-│   ├── index.html      # Homepage
-│   ├── login.html      # Authentication pages
-│   ├── trips.html      # Trip management & viewing
-│   └── interaction.html# Interaction request handling
-│── static/             # CSS, JS, and images (Bootstrap is loaded via CDN)
-│── assets/design/      # Includes Wireframes, Mockups, and Diagrams.
-│── venv/               # Virtual environment
-│── requirements.txt    # Python dependencies
-└── README.md           # Project documentation
-```
+## 🧱 Data Models & Schema
+
+### **Entities**
+
+| Model | Description | Key Fields |
+|--------|--------------|------------|
+| **User** | Registered traveler/local | id, username, email, password_hash |
+| **Trip** | Travel listing with location & duration | id, destination, start_date, end_date, user_id |
+| **SkillSwap** | Skill offered or requested | id, skill_offered, skill_wanted, trip_id |
+| **Interaction** | Communication between users | id, message, status, trip_id, sender_id, recipient_id |
+
+### **Relationships**
+- User → Trip → Interaction (One-to-Many)
+- Trip ↔ SkillSwap (One-to-One)
+- Cascade delete enabled on Trip deletion
+
+### **Entity Relationship Diagram (ERD)**
+![Database Schema](assets/design/schema.png)
+
+---
+
+## 🎨 UX Design
+
+- Mobile-first and responsive design using **Bootstrap grid system**
+- Consistent color palette for accessibility (WCAG AA)
+- Wireframes and mockups are located in `assets/design/`
+- Navigation is clear and minimal, ensuring ease of use
+
+---
 
 ## ⚙️ Installation & Setup
 
 ### 1️⃣ Clone the Repository
-
 ```bash
-git clone https://github.com/RaduScripnic/GlobeSwap
+git clone https://github.com/RaduScripnic/GlobeSwap.git
 cd GlobeSwap
 ```
 
-### 2️⃣ Create a Virtual Environment
-
+### 2️⃣ Create and Activate Virtual Environment
 ```bash
 python3 -m venv venv
-source venv/bin/activate   # On Mac/Linux
-venv\Scripts\activate      # On Windows
+source venv/bin/activate   # Mac/Linux
+venv\Scripts\activate    # Windows
 ```
 
 ### 3️⃣ Install Dependencies
-
 ```bash
 pip install -r requirements.txt
 ```
 
 ### 4️⃣ Set Up the Database
-
 ```bash
 flask db init
 flask db migrate -m "Initial migration"
@@ -63,66 +84,86 @@ flask db upgrade
 ```
 
 ### 5️⃣ Run the Application
-
 ```bash
 python app.py
 ```
+Visit 👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
-Visit [http://127.0.0.1:5000](http://127.0.0.1:5000) in your browser.
+---
 
-## 📜 Development Cycle
+## 🧭 Development Cycle
 
-* Initial setup, database models, authentication, CRUD for Trips, SkillSwap, Interactions, validation, and deployment preparation.
+| Phase | Description |
+|--------|--------------|
+| 1️⃣ Setup | Flask configuration, routes, templates created |
+| 2️⃣ Database | Models (User, Trip, SkillSwap, Interaction) implemented |
+| 3️⃣ CRUD Logic | Added Create, Read, Update, Delete operations for Trips |
+| 4️⃣ Authentication | Secure registration and login added |
+| 5️⃣ UI Enhancements | Bootstrap styling and layout improvements |
+| 6️⃣ Testing | Manual and validation testing performed |
+| 7️⃣ Deployment | Finalized for Render cloud hosting |
 
-## 🗄️ Data Models & Schema
-
-### User
-
-* id (PK)
-* username, email (Unique)
-* password\_hash
-* created\_at
-
-### Trip
-
-* id (PK), destination
-* start\_date, end\_date
-* description
-* is\_accommodation\_offer
-* user\_id (FK)
-
-### SkillSwap
-
-* id (PK)
-* skill\_offered, skill\_wanted
-* trip\_id (FK, unique)
-
-### Interaction
-
-* id (PK), message, status
-* trip\_id (FK), sender\_id (FK), recipient\_id (FK)
-
-### Relationships
-
-* User → Trip: One-to-Many
-* Trip ↔ SkillSwap: One-to-One
-* Trip → Interaction: One-to-Many
-* Cascade: Deleting Trip deletes related SkillSwap and Interaction records.
-
-## 🎨 UX Design & Responsiveness
-
-* Mobile-first, Bootstrap grid, accessible color palette, icons for clarity.
-* Wireframes and mockups in `assets/design/`.
+---
 
 ## 🧪 Manual Testing
 
-* Registration, Create/Read/Update/Delete Trip, Interactions workflow, Input validation.
+| Feature | Action | Expected Result | Actual Result | Screenshot |
+|----------|--------|-----------------|----------------|-------------|
+| **User Registration** | Create account | Redirect to dashboard | ✅ Works | ![Register](assets/testing/register.png) |
+| **Login/Logout** | Enter credentials / logout | Session managed correctly | ✅ Works | ![Login](assets/testing/login.png) |
+| **Create Trip** | Fill form & submit | New trip saved | ✅ Works | ![Trip Create](assets/testing/trip-create.png) |
+| **View Trips** | Open /trips | All trips displayed | ✅ Works | ![Trips List](assets/testing/trip-list.png) |
+| **Edit Trip** | Update trip details | Changes reflected | ✅ Works | ![Trip Edit](assets/testing/trip-edit.png) |
+| **Delete Trip** | Delete button clicked | Trip removed | ✅ Works | ![Trip Delete](assets/testing/trip-delete.png) |
+| **Skill Swap CRUD** | Add/edit skill exchange | Works as intended | ✅ Works | ![Skill Swap](assets/testing/skillswap.png) |
+| **Interaction Requests** | Send message/request | Appears for recipient | ✅ Works | ![Interaction](assets/testing/interaction.png) |
 
-## 🚀 Deployment
+All tests passed successfully on local and deployed versions.
 
-* Cloud deployment with secure environment variables, Procfile, and `requirements.txt`.
+---
+
+## 🌐 Deployment
+
+### **Render Deployment Process**
+Deployed live at 👉 [https://globeswap.onrender.com](https://globeswap.onrender.com)
+
+**Steps Taken:**
+1. Final code pushed to [GitHub repo](https://github.com/RaduScripnic/GlobeSwap).
+2. Created a **Render Web Service** connected to GitHub.
+3. Added environment variables:
+   - `SECRET_KEY`
+   - `DATABASE_URL`
+4. Added a `Procfile`:
+   ```bash
+   web: gunicorn app:app
+   ```
+5. Build and deploy logs verified — successful deployment.
+
+**Deployment Verification:**
+- CRUD functions tested successfully online.
+- Console logs show no errors.
+- Database persistence verified.
+
+---
+
+## 📋 Project Tracking
+
+Project features, issues, and testing tasks were organized and tracked using:  
+📅 [GitHub Project Board](https://github.com/users/RaduScripnic/projects/5/views/1)
+
+---
 
 ## 📚 Credits & Attribution
 
-* Flask, SQLAlchemy, Flask-Migrate, Bootstrap.
-* Original work by Radu Scripnic. External docs referenced for Flask and SQLAlchemy.
+- **Frameworks & Tools:** Flask, SQLAlchemy, Flask-Migrate, Bootstrap, Jinja2.
+- **Hosting:** Render.
+- **Inspiration & References:** Flask official documentation, Miguel Grinberg tutorials.
+- **Original Work:** All logic and integration written by **Radu Scripnic**.
+- **ERD & Diagrams:** Designed using Lucidchart.
+
+---
+
+## 🧾 License
+This project is licensed under the **MIT License** — feel free to use and modify for educational purposes.
+
+---
