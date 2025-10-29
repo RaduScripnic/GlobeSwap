@@ -56,6 +56,46 @@ The project demonstrates **CRUD functionality**, **database design**, and **depl
 
 ---
 
+## 🧭 UX & Design Documentation (Pass 1.1)
+
+### 🎯 **Target Audience**
+- Travelers seeking cultural exchange opportunities  
+- Locals interested in sharing skills or hosting guests
+
+### 🎨 **Design Principles**
+- **Accessibility:** Meets WCAG AA contrast guidelines  
+- **Responsiveness:** Bootstrap ensures proper scaling on all devices  
+- **Consistency:** Color and layout uniform across pages  
+- **Clarity:** Key sections (Trips, Interactions, Profile) always visible  
+
+### 🧩 **Design Assets**
+All visual design assets are located in the `/assets/design/` folder:
+- `home-wireframe.png` – Home layout and navigation  
+- `trip-list-wireframe.png` – List and detail page structure  
+- `interaction-wireframe.png` – Message flow  
+- `mobile-view-wireframe.png` – Responsive mobile layout  
+
+![Wireframe Example](assets/design/home-wireframe.png)
+
+### 🌈 **Color Palette**
+
+| Use | Color | Hex |
+|------|--------|------|
+| Primary | Deep Blue | `#0d6efd` |
+| Secondary | Teal | `#20c997` |
+| Accent | Orange | `#fd7e14` |
+| Background | White | `#ffffff` |
+| Text | Charcoal | `#212529` |
+
+### 🗺️ **Navigation Flow**
+1. **Home** – Overview and signup  
+2. **Trips** – Browse, create, or edit listings  
+3. **Skill Swap** – Offer/request skills  
+4. **Interactions** – View and respond to messages  
+5. **Profile** – Manage user info and trips  
+
+---
+
 ## ⚙️ Installation & Setup
 
 ### 1️⃣ Clone the Repository
@@ -68,7 +108,7 @@ cd GlobeSwap
 ```bash
 python3 -m venv venv
 source venv/bin/activate   # Mac/Linux
-venv\Scripts\activate    # Windows
+venv\Scripts\activate      # Windows
 ```
 
 ### 3️⃣ Install Dependencies
@@ -87,6 +127,7 @@ flask db upgrade
 ```bash
 python app.py
 ```
+
 Visit 👉 [http://127.0.0.1:5000](http://127.0.0.1:5000)
 
 ---
@@ -122,14 +163,43 @@ All tests passed successfully on local and deployed versions.
 
 ---
 
+## 🧪 Testing Documentation (Pass 1.5)
+
+A structured manual testing process was performed to verify **functionality, usability, responsiveness, and data integrity**.
+
+### 🔍 **Testing Summary**
+| Test ID | Area | Description | Expected Result | Outcome |
+|----------|------|-------------|-----------------|----------|
+| T1 | Registration | Create new user | Redirected to dashboard | ✅ Passed |
+| T2 | Login/Logout | Manage session | User logged in/out correctly | ✅ Passed |
+| T3 | Trip CRUD | Create/Edit/Delete | All actions reflected in UI | ✅ Passed |
+| T4 | Skill Swap | Offer/request skill | Linked correctly to trip | ✅ Passed |
+| T5 | Interaction | Send message | Saved in DB, visible to recipient | ✅ Passed |
+| T6 | Responsive Layout | Resize window | Layout adapts correctly | ✅ Passed |
+| T7 | Validation | Invalid input | Error shown, no crash | ✅ Passed |
+
+### ⚙️ **Bug Tracking**
+| Bug | Cause | Fix | Result |
+|------|-------|-----|--------|
+| Trip not saving | Missing required field | Added validation in Flask form | ✅ Fixed |
+| Message not appearing | Wrong model relation | Updated `foreign key` mapping | ✅ Fixed |
+| Mobile layout issue | Missing Bootstrap classes | Added `.col-12` and `.text-center` | ✅ Fixed |
+
+### ✅ **Validation Evidence**
+- HTML and CSS validated using W3C and Jigsaw validators  
+- Python code verified with `flake8` (PEP8 compliant)  
+- All console and database tests pass in production
+
+---
+
 ## 🌐 Deployment
 
 ### **Render Deployment Process**
 Deployed live at 👉 [https://globeswap.onrender.com](https://globeswap.onrender.com)
 
 **Steps Taken:**
-1. Final code pushed to [GitHub repo](https://github.com/RaduScripnic/GlobeSwap).
-2. Created a **Render Web Service** connected to GitHub.
+1. Final code pushed to [GitHub repo](https://github.com/RaduScripnic/GlobeSwap)
+2. Connected GitHub repo to **Render Web Service**
 3. Added environment variables:
    - `SECRET_KEY`
    - `DATABASE_URL`
@@ -137,33 +207,34 @@ Deployed live at 👉 [https://globeswap.onrender.com](https://globeswap.onrende
    ```bash
    web: gunicorn app:app
    ```
-5. Build and deploy logs verified — successful deployment.
+5. Verified deployment logs and tested live app
 
-**Deployment Verification:**
-- CRUD functions tested successfully online.
-- Console logs show no errors.
-- Database persistence verified.
+**Verification:**
+- CRUD functions operate as expected  
+- Database persistence confirmed  
+- No console or build errors  
+- DEBUG mode disabled in production  
 
 ---
 
 ## 📋 Project Tracking
 
-Project features, issues, and testing tasks were organized and tracked using:  
+All features, issues, and tasks were organized and tracked using:  
 📅 [GitHub Project Board](https://github.com/users/RaduScripnic/projects/5/views/1)
 
 ---
 
 ## 📚 Credits & Attribution
 
-- **Frameworks & Tools:** Flask, SQLAlchemy, Flask-Migrate, Bootstrap, Jinja2.
-- **Hosting:** Render.
-- **Inspiration & References:** Flask official documentation, Miguel Grinberg tutorials.
-- **Original Work:** All logic and integration written by **Radu Scripnic**.
-- **ERD & Diagrams:** Designed using Lucidchart.
+- **Frameworks & Tools:** Flask, SQLAlchemy, Flask-Migrate, Bootstrap, Jinja2  
+- **Hosting:** Render  
+- **Inspiration:** Flask Docs, Miguel Grinberg tutorials  
+- **Original Work:** All code written by **Radu Scripnic**  
+- **ERD & Design:** Created using Lucidchart  
 
 ---
 
 ## 🧾 License
-This project is licensed under the **MIT License** — feel free to use and modify for educational purposes.
+This project is licensed under the **MIT License** — free to use and modify for educational purposes.
 
 ---
