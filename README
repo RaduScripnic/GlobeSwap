@@ -44,6 +44,7 @@ The project demonstrates **CRUD functionality**, **database design**, and **depl
 
 ### **Entity Relationship Diagram (ERD)**
 ![Database Schema](assets/design/schema.png)
+(https://www.figma.com/design/k6iZinVmnDHXO2CsxiWkN8/Wireframing--Copy-?node-id=0-1&t=5yGcQVaRkQcwL7Nu-1)
 
 ---
 
@@ -186,7 +187,7 @@ A structured manual testing process was performed to verify **functionality, usa
 | Mobile layout issue | Missing Bootstrap classes | Added `.col-12` and `.text-center` | ✅ Fixed |
 
 ### ✅ **Validation Evidence**
-- HTML and CSS validated using W3C and Jigsaw validators  
+- HTML and CSS validated using W3C and Jigsaw validators(assets/testing/interaction.png) 
 - Python code verified with `flake8` (PEP8 compliant)  
 - All console and database tests pass in production
 
